@@ -1,0 +1,11 @@
+# MetaIsaacGrasp dependencies (install into metagrasp conda env alongside Isaac Sim 5.1)
+opencv-python
+pandas
+trimesh
+transforms3d
+python-fcl
+matplotlib
+h5py
+warp-lang
+# Optional: point-cloud visualization for remote-agent teleop (N/M keys)
+open3d

@@ -1,0 +1,9 @@
+.vs/
+.vscode/
+*.pyc
+__pycache__/
+
+datasets/
+train_results/
+pretrained/
+temp/
