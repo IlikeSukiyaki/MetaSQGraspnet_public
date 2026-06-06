@@ -1,0 +1,15 @@
+name: rgbsq_grasp
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - numpy
+  - scipy
+  - pandas
+  - scikit-learn
+  - omegaconf
+  - tensorboard
+  - tqdm
+  - pip:
+      - open3d

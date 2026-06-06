@@ -1,0 +1,64 @@
+model:
+  arch: segnet
+  backbone:
+    arch: dgcnn
+    use_spatial_transform: False
+    use_mean_global_feature: False
+    k: 20
+    leakyrelu_slope: 0.2
+    input_dim: 3
+    l_hidden_local: [64, 64, 128, 256]
+    local_feature_layer: 4 
+    global_feature_dim: 1024
+  l_hidden: [512, 256, 128]
+  num_primitives: 5
+trainer: segmentation
+training:
+  n_epoch: 100
+  loss:
+    type: segmentation_loss
+  optimizer:
+    name: 'adam'
+    lr: 0.001
+  metric:
+    type: segmentation
+    num_classes: 5
+  print_interval: 100
+  val_interval: 2000
+  save_interval: 1000
+  visualize_number: 3
+  visualize_interval: 1000
+data:
+  training:
+    loader: object
+    num_points: 3000
+    num_sampled_points: 1000 
+    num_primitives: 5
+    noise_augment: True
+    noise_std: 0.001
+    path: datasets/object_dataset
+    csv_name: 'train_datalist.csv' 
+    batch_size: 16
+    num_workers: 8
+  validation:
+    loader: object
+    num_points: 3000
+    num_sampled_points: 1000 
+    num_primitives: 5
+    noise_augment: True
+    noise_std: 0.001
+    path: datasets/object_dataset
+    csv_name: 'validation_datalist.csv' 
+    batch_size: 16
+    num_workers: 8
+  test:
+    loader: object
+    num_points: 3000
+    num_sampled_points: 1000 
+    num_primitives: 5
+    noise_augment: True
+    noise_std: 0.001
+    path: datasets/object_dataset
+    csv_name: 'test_datalist.csv'
+    batch_size: 16
+    num_workers: 8

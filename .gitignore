@@ -1,0 +1,52 @@
+# --- Large third-party dependency (install separately; see README.md) ---
+IsaacLab/
+
+# --- MetaGraspNet object assets (download separately; see models_ifl/README.md) ---
+models_ifl/*
+!models_ifl/README.md
+models_ifl.zip
+
+# --- MetaIsaacGrasp generated / collected data ---
+metagrasp/MetaIsaacGrasp/datasets/*
+!metagrasp/MetaIsaacGrasp/datasets/README.md
+metagrasp/MetaIsaacGrasp/models/models_ifl
+metagrasp/MetaIsaacGrasp/models/dataset_real/
+metagrasp/MetaIsaacGrasp/data/
+metagrasp/MetaIsaacGrasp/data_all/
+metagrasp/MetaIsaacGrasp/experiments/
+metagrasp/MetaIsaacGrasp/logs*/
+metagrasp/MetaIsaacGrasp/wandb*/
+metagrasp/MetaIsaacGrasp/.algorithms/
+
+# --- rgbsq_grasp datasets and training artifacts ---
+rgbsq_grasp/datasets/*
+!rgbsq_grasp/datasets/README.md
+rgbsq_grasp/train_results/
+rgbsq_grasp/pretrained/
+rgbsq_grasp/evaluation_results/
+rgbsq_grasp/temp/
+
+# --- Checkpoints and caches ---
+*.pth
+*.pt
+*.ckpt
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# --- IDE / editor ---
+.vscode/
+.cursor/
+.vs/
+.idea/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Nested git metadata (removed before push; keep ignored as safety) ---
+**/.git/

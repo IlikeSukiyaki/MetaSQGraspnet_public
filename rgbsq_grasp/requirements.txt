@@ -1,0 +1,9 @@
+tensorboard
+six
+omegaconf
+scikit-learn
+scipy
+open3d
+pandas
+tqdm
+python-fcl

@@ -1,0 +1,56 @@
+cd /home/sustech/桌面/DSQNet/metagrasp/MetaIsaacGrasp
+conda activate metagrasp
+python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras \
+  --save_camera_data \
+  --output_dir datasets/sqnet_isaac \
+  --max_episodes 100
+  # height: edit TOPDOWN_CAMERA_HEIGHT in element_cfg.py, or pass --topdown_height 1.8
+
+
+
+python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras \
+  --save_camera_data --output_dir datasets/sqnet_isaac --max_episodes 1
+
+
+
+python tools/convert_sq_to_npy.py \
+  --input datasets/sqnet_isaac/001 \
+  --output ../../rgbsq_grasp/datasets/isaac_synth/001 \
+  --camera both \
+  --mask auto
+
+
+python tools/inspect_sq_sample.py \
+  --sample datasets/sqnet_isaac/001/epi_000000 \
+  --camera camera_topdown
+
+
+# Partial point cloud extraction (see docs/partial_pc_extraction.md)
+python tools/extract_partial_pc.py \
+  --sample datasets/sqnet_isaac/001/epi_000000 \
+  --camera topdown --mask auto --color instance --show
+
+python tools/extract_partial_pc.py \
+  --sample datasets/sqnet_isaac/001/epi_000000 \
+  --camera topdown --mask mesh --color rgb --ply --show
+
+python tools/extract_partial_pc.py \
+  --input datasets/sqnet_isaac/001 \
+  --camera both --mask auto --color instance
+
+
+# Classical antipodal grasp smoke task (see docs/classical_grasp_sampling.md)
+python tools/generate_object_grasps.py \
+  --mesh_root /home/sustech/桌面/DSQNet/models_ifl \
+  --categories 001 \
+  --gripper_profile hand_e \
+  --gripper_length 5.0 \
+  --num_points 500 \
+  --max_grasps 2000 \
+  --pool_size 1
+
+python urdf_converter.py --input /home/sustech/桌面/DSQNet/models_ifl/001/textured.urdf
+
+python run.py --task AIR-v0-Classical --num_envs 1 --enable_cameras
+
+python run.py --task AIR-v0-Classical --num_envs 1 --headless --enable_cameras --saved_video

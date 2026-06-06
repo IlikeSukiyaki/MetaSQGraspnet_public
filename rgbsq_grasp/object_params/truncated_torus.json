@@ -1,0 +1,17 @@
+{
+    "random": true,
+    "r_torus": {
+        "min": 0.02,
+        "max": 0.075
+    },
+    "r_tube": {
+        "min": 0.0025,
+        "max": 0.015
+    },
+    "c1": true,
+    "color": [
+        1,
+        0,
+        0
+    ]
+}
