@@ -41,7 +41,8 @@ class AIREnvData(AIREnvBase):
         super().__init__(cfg, 
                          render_mode, 
                          random_drop_obj=True, 
-                         save_camera_data=True)
+                         save_camera_data=True,
+                         **kwargs)
     
     def _advance_state_machine(self):
         """Compute the desired state of the robot's end-effector and the gripper."""

@@ -57,6 +57,27 @@ class AIRPickSm:
             os.makedirs(video_output_dir, exist_ok=True)
             print(f"[INFO] Success video recording enabled: {video_output_dir}")
 
+        video_view_presets = None
+        if (
+            saved_video
+            and args_cli.task == "object-v0-Classical"
+            and getattr(args_cli, "saved_video_views", None)
+        ):
+            try:
+                from isaac_env.object_env_classical.env_cfg import CLASSICAL_VIDEO_VIEW_PRESETS
+            except ImportError:
+                CLASSICAL_VIDEO_VIEW_PRESETS = {}
+            requested = [name.strip() for name in args_cli.saved_video_views.split(",") if name.strip()]
+            video_view_presets = {
+                name: CLASSICAL_VIDEO_VIEW_PRESETS[name]
+                for name in requested
+                if name in CLASSICAL_VIDEO_VIEW_PRESETS
+            }
+            if video_view_presets:
+                print(f"[INFO] Recording success videos from views: {', '.join(video_view_presets)}")
+            else:
+                video_view_presets = None
+
         self.env = gym.make(
             args_cli.task,
             cfg=env_cfg,
@@ -65,6 +86,7 @@ class AIRPickSm:
             save_video=saved_video,
             video_output_dir=video_output_dir,
             video_fps=getattr(args_cli, "saved_video_fps", 30),
+            video_view_presets=video_view_presets,
         )
         self.device = self.env_unwrapped.device
         self.num_envs = self.env_unwrapped.num_envs
@@ -73,7 +95,25 @@ class AIRPickSm:
         self.inference_criteria = torch.zeros(
             self.num_envs, dtype=torch.bool, device=self.device
         )
-    
+        self.max_episodes = getattr(args_cli, "max_episodes", None)
+        self.max_successful_grasps = getattr(args_cli, "max_successful_grasps", None)
+
+    def should_stop(self) -> bool:
+        env = self.env_unwrapped
+        if self.max_successful_grasps is not None:
+            saved = int(getattr(env, "num_saved_videos", 0))
+            if saved >= self.max_successful_grasps:
+                print(
+                    f"[INFO] Reached max successful grasps ({self.max_successful_grasps}). Stopping."
+                )
+                return True
+        if self.max_episodes is not None:
+            episodes = int(env.epi_step_count[:, 0].max().item())
+            if episodes >= self.max_episodes:
+                print(f"[INFO] Reached max episodes ({self.max_episodes}). Stopping.")
+                return True
+        return False
+
     def init_run(self):
         """Initialize the simulation loop."""
         # Environment step

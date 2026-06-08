@@ -85,7 +85,7 @@ def validate_classical_assets() -> None:
                 "Missing antipodal HDF5 grasps: "
                 f"{missing_grasps}. Run tools/generate_object_grasps.py first."
             )
-        raise FileNotFoundError("AIR-v0-Classical asset check failed. " + " ".join(details))
+        raise FileNotFoundError("object-v0-Classical asset check failed. " + " ".join(details))
 
 
 MGN_CFGs = [

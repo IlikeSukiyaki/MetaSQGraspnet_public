@@ -19,11 +19,11 @@ from .element_cfg import (
     ROBOT_NAME,
     desk_center,
 )
-from .env_cfg import CellEnvCfg
+from .env_cfg import CLASSICAL_VIDEO_VIEW_PRESETS, CellEnvCfg
 from .wp_cfg import infer_state_machine_disc
 
 
-class AIREnvClassical(AIREnvBase):
+class ObjectEnvClassical(AIREnvBase):
     def __init__(
         self,
         cfg: CellEnvCfg,
@@ -31,6 +31,8 @@ class AIREnvClassical(AIREnvBase):
         save_camera_data: bool = False,
         **kwargs,
     ):
+        if kwargs.get("save_video") and not kwargs.get("video_view_presets"):
+            kwargs["video_view_presets"] = CLASSICAL_VIDEO_VIEW_PRESETS
         super().__init__(
             cfg,
             render_mode=render_mode,

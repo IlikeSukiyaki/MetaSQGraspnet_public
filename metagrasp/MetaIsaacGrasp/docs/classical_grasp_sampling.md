@@ -1,6 +1,6 @@
 # Classical Antipodal Grasp Sampling (UR10e + Hand-E)
 
-This guide explains how to **generate**, **visualize**, and **execute** antipodal grasp poses for the classical grasp task (`AIR-v0-Classical`).
+This guide explains how to **generate**, **visualize**, and **execute** antipodal grasp poses for the classical grasp task (`object-v0-Classical`).
 
 For **coordinate frames, pose transformation chain, collision filtering, retry logic, and troubleshooting**, see [classical_grasp_pose_logistics.md](./classical_grasp_pose_logistics.md).
 
@@ -29,7 +29,7 @@ flowchart LR
   subgraph online [Isaac runtime]
     HDF5 --> Runtime[grasp_sampler/runtime.py]
     Profile --> Runtime
-    Runtime --> Task[AIR-v0-Classical]
+    Runtime --> Task[object-v0-Classical]
     Task --> SM[reach / approach / grasp / lift]
   end
 ```
@@ -144,12 +144,12 @@ Run the classical smoke task:
 
 ```bash
 conda activate env_isaaclab
-python run.py --task AIR-v0-Classical --num_envs 1 --enable_cameras
+python run.py --task object-v0-Classical --num_envs 1 --enable_cameras
 ```
 
 ### Runtime grasp selection
 
-When the state machine reaches **`choose_object`**, [`isaac_env/air_env_classical/env.py`](../isaac_env/air_env_classical/env.py) calls `grasp_runtime.select_best_grasp(...)` with the live object link pose, table collision filter, ranked retry (`attempt`), and minimum jaw width. See [classical_grasp_pose_logistics.md](./classical_grasp_pose_logistics.md) for the full pipeline.
+When the state machine reaches **`choose_object`**, [`isaac_env/object_env_classical/env.py`](../isaac_env/object_env_classical/env.py) calls `grasp_runtime.select_best_grasp(...)` with the live object link pose, table collision filter, ranked retry (`attempt`), and minimum jaw width. See [classical_grasp_pose_logistics.md](./classical_grasp_pose_logistics.md) for the full pipeline.
 
 Steps in [`grasp_sampler/runtime.py`](../grasp_sampler/runtime.py):
 
@@ -206,7 +206,7 @@ Grasps are **not** stored as robot poses. The final `hande_end` pose is computed
 | `grasp_sampler/generate_grasp_object.py` | Antipodal sampler core |
 | `grasp_sampler/runtime.py` | Online scene filter + EE pose |
 | `grasp_sampler/visualize_grasp_object.py` | Offline Trimesh viewer |
-| `isaac_env/air_env_classical/` | `AIR-v0-Classical` task |
+| `isaac_env/object_env_classical/` | `object-v0-Classical` task |
 | `docs/classical_grasp_pose_logistics.md` | Frame conventions, selection, retry, troubleshooting |
 | `command.txt` | Copy-paste command snippets |
 
@@ -216,6 +216,6 @@ Grasps are **not** stored as robot poses. The final `hande_end` pose is computed
 
 | Task | Grasp source |
 |------|--------------|
-| `AIR-v0-Classical` | HDF5 + Hand-E scene filter (this guide) |
+| `object-v0-Classical` | HDF5 + Hand-E scene filter (this guide) |
 | `AIR-v0-Grasp` | Remote vMF-Contact agent or vision demo |
 | `AIR-v0-Data` | Vision demo / optional HDF5 |
