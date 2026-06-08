@@ -13,7 +13,6 @@ from isaac_env.air_env_base.element_cfg import *  # noqa: F403
 
 REMOTE_AGENT = False
 READ_FROM_HDF5 = True
-NUM_OBJS = 1
 N_MULTIPLE_CAM = 1
 
 CLASSICAL_OBJ_IDS = ["001"]
@@ -32,8 +31,9 @@ def _resolve_model_path() -> str:
 
 
 MODEL_PATH = _resolve_model_path()
-OBJ_LABLE = CLASSICAL_OBJ_IDS
-MGN_PATHS = [os.path.join(MODEL_PATH, obj_id, "orbit_obj.usd") for obj_id in OBJ_LABLE]
+NUM_OBJS = 0
+OBJ_LABLE = []
+MGN_PATHS = []
 OBJ_PATH = MGN_PATHS
 
 CLASSICAL_GRASP_MESH_ROOT = MODEL_PATH
@@ -88,11 +88,18 @@ def validate_classical_assets() -> None:
         raise FileNotFoundError("object-v0-Classical asset check failed. " + " ".join(details))
 
 
-MGN_CFGs = [
-    RigidObjectCfg(
+def _normalize_classical_obj_id(obj_id: str) -> str:
+    obj_id = str(obj_id).strip()
+    if not obj_id:
+        raise ValueError("Object IDs for object-v0-Classical cannot be empty.")
+    return obj_id.zfill(3) if obj_id.isdigit() else obj_id
+
+
+def _make_object_cfg(obj_id: str, usd_path: str) -> RigidObjectCfg:
+    return RigidObjectCfg(
         spawn=sim_utils.UsdFileCfg(
-            usd_path=mgn,
-            semantic_tags=[("class", OBJ_LABLE[i])],
+            usd_path=usd_path,
+            semantic_tags=[("class", obj_id)],
             rigid_props=rigid_props,  # noqa: F405
             mass_props=sim_utils.MassPropertiesCfg(density=5.0),
             articulation_props=sim_utils.ArticulationRootPropertiesCfg(
@@ -106,7 +113,28 @@ MGN_CFGs = [
         ),
         collision_group=0,
     )
-    for i, mgn in enumerate(MGN_PATHS)
-]
 
-OBJ_CFGs = MGN_CFGs
+
+def configure_classical_objects(obj_ids: list[str] | None = None) -> None:
+    """Configure the object pool used by object-v0-Classical."""
+    global NUM_OBJS, OBJ_LABLE, MGN_PATHS, OBJ_PATH, MGN_CFGs, OBJ_CFGs
+
+    normalized_ids = [
+        _normalize_classical_obj_id(obj_id)
+        for obj_id in (CLASSICAL_OBJ_IDS if obj_ids is None else obj_ids)
+    ]
+    if not normalized_ids:
+        raise ValueError("object-v0-Classical needs at least one object ID.")
+
+    NUM_OBJS = len(normalized_ids)
+    OBJ_LABLE = normalized_ids
+    MGN_PATHS = [os.path.join(MODEL_PATH, obj_id, "orbit_obj.usd") for obj_id in OBJ_LABLE]
+    OBJ_PATH = MGN_PATHS
+    MGN_CFGs = [
+        _make_object_cfg(obj_id, usd_path)
+        for obj_id, usd_path in zip(OBJ_LABLE, MGN_PATHS, strict=True)
+    ]
+    OBJ_CFGs = MGN_CFGs
+
+
+configure_classical_objects()

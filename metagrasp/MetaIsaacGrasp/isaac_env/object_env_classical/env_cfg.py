@@ -45,12 +45,13 @@ CLASSICAL_VIDEO_VIEW_PRESETS: dict[str, tuple[tuple[float, float, float], tuple[
 }
 
 
-def reset_classical_object_pose(
+def reset_classical_random_object(
     env: ManagerBasedEnv,
     env_ids: torch.Tensor,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("objs"),
+    drop_height: float = 0.1,
 ):
-    """Place the object at a fixed, upright pose with zero velocity (stable demo spawn)."""
+    """Place one random object at the stable demo pose and hide the rest."""
     asset = env.scene[asset_cfg.name]
     root_states = asset.data.default_object_state[env_ids].clone()
     env_num, obj_num = root_states.size(0), root_states.size(1)
@@ -60,6 +61,16 @@ def reset_classical_object_pose(
     positions = root_states[..., 0:3] + env.scene.env_origins[env_ids][:, None, :]
     orientations = orient.view(1, 1, 4).expand(env_num, obj_num, 4)
     velocities = torch.zeros(env_num, obj_num, 6, device=asset.device, dtype=root_states.dtype)
+
+    for batch_idx, env_id in enumerate(env_ids):
+        active_idx = int(torch.randint(0, obj_num, (1,), device=asset.device).item())
+        env.obj_chosen[env_id] = active_idx
+
+        for obj_idx in range(obj_num):
+            if obj_idx == active_idx:
+                continue
+            positions[batch_idx, obj_idx] = env.scene.env_origins[env_id].clone()
+            positions[batch_idx, obj_idx, 2] = drop_height
 
     asset.write_object_pose_to_sim(torch.cat([positions, orientations], dim=-1), env_ids=env_ids)
     asset.write_object_velocity_to_sim(velocities, env_ids=env_ids)
@@ -233,7 +244,7 @@ class EventCfg:
     def __init__(self):
         self.reset_robot_pos = EventTerm(func=reset_robot_to_default, mode="reset")
         self.reset_obj_pos = EventTerm(
-            func=reset_classical_object_pose,
+            func=reset_classical_random_object,
             mode="reset",
             params={"asset_cfg": SceneEntityCfg("objs")},
         )
