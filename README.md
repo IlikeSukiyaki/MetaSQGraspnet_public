@@ -137,7 +137,7 @@ See `rgbsq_grasp/README.md` and `rgbsq_grasp/IMPLEMENTATION.md` for details.
 ```bash
 cd metagrasp/MetaIsaacGrasp
 conda activate env_isaaclab
-python run.py --task AIR-v0-Classical --num_envs 1 --enable_cameras
+python run.py --task object-v0-Classical --num_envs 1 --enable_cameras
 ```
 
 Requires `models_ifl/001/{textured.obj, textured.obj.hdf5, orbit_obj.usd}`.

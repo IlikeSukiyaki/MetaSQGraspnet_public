@@ -49,6 +49,7 @@ class AIREnvBase(ManagerBasedRLEnv):
                  save_video: bool = False,
                  video_output_dir: str | None = None,
                  video_fps: int = 30,
+                 video_view_presets: dict[str, tuple[tuple[float, float, float], tuple[float, float, float]]] | None = None,
                  **kwargs):
         # Setup RL environment
         super().__init__(cfg, render_mode)
@@ -60,10 +61,19 @@ class AIREnvBase(ManagerBasedRLEnv):
         self.save_video = save_video
         self.video_output_dir = video_output_dir or os.path.join("logs", "videos")
         self.video_fps = video_fps
-        self._episode_video_writers = [
-            EpisodeVideoWriter() if save_video else None for _ in range(self.num_envs)
-        ]
+        self.video_view_presets = video_view_presets if video_view_presets else None
+        self._video_view_names = list(self.video_view_presets.keys()) if self.video_view_presets else []
+        if save_video and self.video_view_presets:
+            self._episode_video_writers = [
+                {name: EpisodeVideoWriter() for name in self._video_view_names}
+                for _ in range(self.num_envs)
+            ]
+        else:
+            self._episode_video_writers = [
+                EpisodeVideoWriter() if save_video else None for _ in range(self.num_envs)
+            ]
         self._episode_video_committed = [False for _ in range(self.num_envs)]
+        self.num_saved_videos = 0
 
         # Define entity
         self.robot = self.scene[ROBOT_NAME]
@@ -477,21 +487,63 @@ class AIREnvBase(ManagerBasedRLEnv):
 
         return self.grasp_pose
 
-    def _video_temp_path(self, env_id: int) -> str:
-        episode = int(self.epi_step_count[env_id, 0].detach().cpu().item())
-        return os.path.join(self.video_output_dir, f"env{env_id}_epi{episode}.tmp.mp4")
+    def _set_viewer_camera(self, view_name: str | None = None) -> None:
+        if view_name is None or not self.video_view_presets:
+            return
+        eye, lookat = self.video_view_presets[view_name]
+        if self.viewport_camera_controller is not None:
+            self.viewport_camera_controller.update_view_location(eye, lookat)
+        else:
+            self.sim.set_camera_view(list(eye), list(lookat))
 
-    def _video_final_path(self, env_id: int) -> str:
+    def _render_viewer_frame(self):
+        if not hasattr(self, "_rgb_annotator"):
+            # Initialize Isaac Lab's render product/annotator before forcing a fresh viewport render.
+            self.render(recompute=True)
+        self.sim.render()
+        return self.render(recompute=True)
+
+    def _video_temp_path(self, env_id: int, view_name: str | None = None) -> str:
+        episode = int(self.epi_step_count[env_id, 0].detach().cpu().item())
+        view_suffix = f"_{view_name}" if view_name else ""
+        return os.path.join(self.video_output_dir, f"env{env_id}_epi{episode}{view_suffix}.tmp.mp4")
+
+    def _video_final_path(self, env_id: int, view_name: str | None = None) -> str:
         episode = int(self.epi_step_count[env_id, 0].detach().cpu().item())
         step = int(self.epi_step_count[env_id, 1].detach().cpu().item())
         chosen = int(self.obj_chosen[env_id].detach().cpu().item())
         obj_id = self.obj_label[chosen] if 0 <= chosen < len(self.obj_label) else "unknown"
+        view_suffix = f"_view_{view_name}" if view_name else ""
         return os.path.join(
             self.video_output_dir,
-            f"grasp_success_env{env_id}_epi{episode}_obj{obj_id}_step{step}.mp4",
+            f"grasp_success_env{env_id}_epi{episode}_obj{obj_id}_step{step}{view_suffix}.mp4",
         )
 
     def _capture_video_frames(self) -> None:
+        if self.video_view_presets:
+            for view_name in self._video_view_names:
+                self._set_viewer_camera(view_name)
+                frame = self._render_viewer_frame()
+                if frame is None or frame.size == 0:
+                    continue
+                height, width = frame.shape[:2]
+                for env_id in range(self.num_envs):
+                    if self._episode_video_committed[env_id]:
+                        continue
+                    writers = self._episode_video_writers[env_id]
+                    writer = writers.get(view_name)
+                    if writer is None:
+                        continue
+                    if not writer.is_active:
+                        writer.start(
+                            self._video_temp_path(env_id, view_name),
+                            width,
+                            height,
+                            self.video_fps,
+                        )
+                    writer.write_frame(frame)
+            return
+
         frame = self.render()
         if frame is None or frame.size == 0:
             return
@@ -512,26 +564,46 @@ class AIREnvBase(ManagerBasedRLEnv):
             return
         for env_id_tensor in env_ids:
             env_id = int(env_id_tensor.detach().cpu().item())
-            writer = self._episode_video_writers[env_id]
-            if writer is not None:
-                writer.abort()
+            writers = self._episode_video_writers[env_id]
+            if isinstance(writers, dict):
+                for writer in writers.values():
+                    if writer is not None:
+                        writer.abort()
+            elif writers is not None:
+                writers.abort()
             self._episode_video_committed[env_id] = False
 
     def _commit_episode_video(self, env_id: int) -> None:
         if not self.save_video or self._episode_video_committed[env_id]:
             return
-        writer = self._episode_video_writers[env_id]
-        if writer is None:
+        writers = self._episode_video_writers[env_id]
+        if writers is None:
             return
-        writer.commit(self._video_final_path(env_id))
+
+        committed_any = False
+        if isinstance(writers, dict):
+            for view_name, writer in writers.items():
+                if writer is None:
+                    continue
+                committed = writer.commit(self._video_final_path(env_id, view_name))
+                committed_any = committed_any or committed is not None
+        else:
+            committed_any = writers.commit(self._video_final_path(env_id)) is not None
+
+        if committed_any:
+            self.num_saved_videos += 1
         self._episode_video_committed[env_id] = True
 
     def close_video_writers(self) -> None:
         if not self.save_video:
             return
-        for writer in self._episode_video_writers:
-            if writer is not None:
-                writer.abort()
+        for writers in self._episode_video_writers:
+            if isinstance(writers, dict):
+                for writer in writers.values():
+                    if writer is not None:
+                        writer.abort()
+            elif writers is not None:
+                writers.abort()
 
     def _summerize_and_reset(self, reward_buf):
         """

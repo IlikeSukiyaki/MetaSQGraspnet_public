@@ -51,6 +51,11 @@ python tools/generate_object_grasps.py \
 
 python urdf_converter.py --input /home/sustech/桌面/DSQNet/models_ifl/001/textured.urdf
 
-python run.py --task AIR-v0-Classical --num_envs 1 --enable_cameras
+python run.py --task object-v0-Classical --num_envs 1 --enable_cameras
 
-python run.py --task AIR-v0-Classical --num_envs 1 --headless --enable_cameras --saved_video
+python run.py --task object-v0-Classical --num_envs 1 --headless --enable_cameras --saved_video --max_successful_grasps 5
+
+
+python run.py --task object-v0-Classical --num_envs 1 \
+  --headless --enable_cameras --saved_video \
+  --saved_video_views front,left,right

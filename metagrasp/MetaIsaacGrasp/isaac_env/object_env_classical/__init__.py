@@ -4,16 +4,16 @@ import gymnasium as gym
 
 from .. import agents
 from .element_cfg import *  # noqa: F403
-from .env import AIREnvClassical
+from .env import ObjectEnvClassical
 from .env_cfg import CellEnvCfg
-from .sim import AIRPickSmClassical
+from .sim import ObjectPickSmClassical
 
-__all__ = ["AIRPickSmClassical", "AIREnvClassical"]
+__all__ = ["ObjectPickSmClassical", "ObjectEnvClassical"]
 
 
 gym.register(
-    id="AIR-v0-Classical",
-    entry_point="isaac_env.air_env_classical:AIREnvClassical",
+    id="object-v0-Classical",
+    entry_point="isaac_env.object_env_classical:ObjectEnvClassical",
     kwargs={
         "env_cfg_entry_point": CellEnvCfg,
         "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",

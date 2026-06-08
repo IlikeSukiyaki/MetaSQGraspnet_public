@@ -46,7 +46,7 @@ class AIREnvTele(AIREnvBase):
     def __init__(self, cfg: CellEnvCfg, render_mode: str | None = None, **kwargs):
         
         # Setup RL environment
-        super().__init__(cfg, render_mode)
+        super().__init__(cfg, render_mode, **kwargs)
 
         self.inference_state = STATE_MACHINE["execute"]
         self.reward_state = STATE_MACHINE["execute"]

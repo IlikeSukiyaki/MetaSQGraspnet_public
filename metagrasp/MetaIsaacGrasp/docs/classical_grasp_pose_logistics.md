@@ -1,4 +1,4 @@
-# Classical Grasp Pose Logistics (`AIR-v0-Classical`)
+# Classical Grasp Pose Logistics (`object-v0-Classical`)
 
 This document explains **how grasp poses flow through the pipeline** — from offline HDF5 storage to the live `hande_end` command in Isaac Sim — and gives a **step-by-step procedure** for future users.
 
@@ -26,11 +26,11 @@ python urdf_converter.py \
   --input models/models_ifl/001/textured.urdf \
   --headless
 
-# 2. Configure object ID in isaac_env/air_env_classical/element_cfg.py
+# 2. Configure object ID in isaac_env/object_env_classical/element_cfg.py
 #    CLASSICAL_OBJ_IDS = ["001"]
 
 # 3. Run in Isaac Sim
-python run.py --task AIR-v0-Classical --num_envs 1 --enable_cameras
+python run.py --task object-v0-Classical --num_envs 1 --enable_cameras
 ```
 
 ---
@@ -149,7 +149,7 @@ gripper_pose_cm = object_pose_cm @ convert_to_gripper_6d(vec_a, vec_b, contact_p
 
 ### Step 4 — State machine uses the command
 
-[`isaac_env/air_env_classical/wp_cfg.py`](../isaac_env/air_env_classical/wp_cfg.py):
+[`isaac_env/object_env_classical/wp_cfg.py`](../isaac_env/object_env_classical/wp_cfg.py):
 
 | State | EE target |
 |-------|-----------|
@@ -212,7 +212,7 @@ python grasp_sampler/visualize_grasp_object.py \
 
 ## Online runtime selection
 
-When the state machine enters **`choose_object`**, [`AIREnvClassical.get_action()`](../isaac_env/air_env_classical/env.py) runs:
+When the state machine enters **`choose_object`**, [`ObjectEnvClassical.get_action()`](../isaac_env/object_env_classical/env.py) runs:
 
 ```python
 select_best_grasp(
@@ -262,14 +262,14 @@ If no collision-free grasp remains at the requested `rank`, the task falls back 
 
 Episode reset uses a **fixed upright pose** (no random drop, no random orientation):
 
-[`element_cfg.py`](../isaac_env/air_env_classical/element_cfg.py):
+[`element_cfg.py`](../isaac_env/object_env_classical/element_cfg.py):
 
 ```python
 CLASSICAL_OBJ_POSE_OFFSET = (0.75, 0.20, 0.08)   # m, relative to default root
 CLASSICAL_OBJ_ORIENTATION_WXYZ = (1.0, 0.0, 0.0, 0.0)
 ```
 
-[`reset_classical_object_pose()`](../isaac_env/air_env_classical/env_cfg.py) runs on episode reset with **zero initial velocity**.
+[`reset_classical_object_pose()`](../isaac_env/object_env_classical/env_cfg.py) runs on episode reset with **zero initial velocity**.
 
 **After a failed lift:** the object is **not** teleported back. The robot waits for stability, reads the **current** object pose, and selects the next ranked grasp. This avoids re-grasping a stale initial pose while the object has moved.
 
@@ -296,7 +296,7 @@ Example log:
 
 ## Configuration reference
 
-Edit [`isaac_env/air_env_classical/element_cfg.py`](../isaac_env/air_env_classical/element_cfg.py):
+Edit [`isaac_env/object_env_classical/element_cfg.py`](../isaac_env/object_env_classical/element_cfg.py):
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
@@ -323,7 +323,7 @@ Robot / scene constants live in [`isaac_env/air_env_base/element_cfg.py`](../isa
 Use `--saved_video` to record a full-episode MP4 from the Isaac Lab viewer camera and keep it only when the grasp lift succeeds:
 
 ```bash
-python run.py --task AIR-v0-Classical --num_envs 1 \
+python run.py --task object-v0-Classical --num_envs 1 \
   --headless --enable_cameras --saved_video
 ```
 
@@ -331,18 +331,27 @@ Notes:
 
 - Isaac Sim still runs; `--headless` only hides the GUI.
 - `--enable_cameras` is required for headless off-screen rendering.
-- Successful clips are written under `logs/videos/AIR-v0-Classical/<timestamp>/` unless `--saved_video_dir` is provided.
+- Successful clips are written under `logs/videos/object-v0-Classical/<timestamp>/` unless `--saved_video_dir` is provided.
+- Videos are saved directly as **H.264 (`avc1`, yuv420p)** via `ffmpeg` for broad player compatibility.
 - Failed episodes discard their temporary MP4, so no file is produced.
-- Tune the third-person view with `viewer.eye` and `viewer.lookat` in [`isaac_env/air_env_classical/env_cfg.py`](../isaac_env/air_env_classical/env_cfg.py).
+- Tune the third-person view with `viewer.eye` and `viewer.lookat` in [`isaac_env/object_env_classical/env_cfg.py`](../isaac_env/object_env_classical/env_cfg.py).
 
 Optional flags:
 
 ```bash
-python run.py --task AIR-v0-Classical --num_envs 1 \
+python run.py --task object-v0-Classical --num_envs 1 \
   --headless --enable_cameras --saved_video \
   --saved_video_dir logs/videos/classical_demo \
-  --saved_video_fps 30
+  --saved_video_fps 30 \
+  --max_successful_grasps 5
 ```
+
+Stop limits:
+
+| Flag | Stops when |
+|------|------------|
+| `--max_successful_grasps N` | `N` successful grasp videos have been saved |
+| `--max_episodes N` | `N` full episode resets (`init_env`) have occurred |
 
 ---
 
@@ -369,10 +378,10 @@ python run.py --task AIR-v0-Classical --num_envs 1 \
 | `grasp_sampler/generate_grasp_object.py` | Antipodal sampler core |
 | `grasp_sampler/gripper_profiles.py` | Hand-E geometry, contact → EE conversion |
 | `grasp_sampler/runtime.py` | Load HDF5, scene collision filter, ranked selection |
-| `isaac_env/air_env_classical/env.py` | Runtime grasp selection hook |
-| `isaac_env/air_env_classical/env_cfg.py` | Fixed object reset, scene/events |
-| `isaac_env/air_env_classical/element_cfg.py` | Object ID, spawn pose, tuning constants |
-| `isaac_env/air_env_classical/wp_cfg.py` | Pick state machine (reach/approach/grasp/lift) |
+| `isaac_env/object_env_classical/env.py` | Runtime grasp selection hook |
+| `isaac_env/object_env_classical/env_cfg.py` | Fixed object reset, scene/events |
+| `isaac_env/object_env_classical/element_cfg.py` | Object ID, spawn pose, tuning constants |
+| `isaac_env/object_env_classical/wp_cfg.py` | Pick state machine (reach/approach/grasp/lift) |
 | `isaac_env/air_env_base/env.py` | `_get_obj_pose`, `_get_ee_pose`, IK step |
 
 ---
@@ -381,6 +390,6 @@ python run.py --task AIR-v0-Classical --num_envs 1 \
 
 | Task | Grasp source |
 |------|--------------|
-| `AIR-v0-Classical` | HDF5 + Hand-E scene filter (this document) |
+| `object-v0-Classical` | HDF5 + Hand-E scene filter (this document) |
 | `AIR-v0-Grasp` | Remote agent or vision demo |
 | `AIR-v0-Data` | Vision demo / optional HDF5 |

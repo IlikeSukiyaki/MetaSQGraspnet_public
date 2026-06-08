@@ -35,6 +35,15 @@ from isaac_env.air_env_base.env_cfg import (
 
 from .element_cfg import *  # noqa: F403
 
+# Third-person viewer presets for success videos (eye, lookat) in world frame (meters).
+CLASSICAL_VIEW_LOOKAT = (0.7, 0.4, 1.0)
+CLASSICAL_VIDEO_VIEW_PRESETS: dict[str, tuple[tuple[float, float, float], tuple[float, float, float]]] = {
+    "front": ((0.6, -1.25, 1.65), CLASSICAL_VIEW_LOOKAT),
+    "left": ((-0.85, 0.4, 1.65), CLASSICAL_VIEW_LOOKAT),
+    "right": ((1.85, 0.4, 1.65), CLASSICAL_VIEW_LOOKAT),
+    "back": ((0.6, 1.35, 1.65), CLASSICAL_VIEW_LOOKAT),
+}
+
 
 def reset_classical_object_pose(
     env: ManagerBasedEnv,
@@ -298,8 +307,9 @@ class CellEnvCfg(ManagerBasedRLEnvCfg):
     def __post_init__(self) -> None:
         self.decimation = 2
         self.episode_length_s = 5
-        self.viewer.eye = (8.0, 0.0, 5.0)
-        self.viewer.lookat = (desk_center[0], desk_center[1], 0.0)  # noqa: F405
+        front_eye, front_lookat = CLASSICAL_VIDEO_VIEW_PRESETS["front"]
+        self.viewer.eye = front_eye
+        self.viewer.lookat = front_lookat
         self.sim.dt = 1 / 120
         self.sim.physx.bounce_threshold_velocity = 0.01
         self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4

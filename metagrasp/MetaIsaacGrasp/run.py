@@ -1,22 +1,3 @@
-# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
-
-"""
-Script to run an environment with a pick and lift state machine.
-
-The state machine is implemented in the kernel function `infer_state_machine`.
-It uses the `warp` library to run the state machine in parallel on the GPU.
-
-.. code-block:: bash
-
-    ./isaaclab.sh -p source/standalone/environments/state_machine/lift_cube_sm.py --num_envs 32
-
-"""
-
-"""Launch Omniverse Toolkit first."""
-
 import argparse
 import torch
 
@@ -35,10 +16,28 @@ parser.add_argument("--video_interval", type=int, default=2000, help="Interval b
 parser.add_argument("--saved_video", action="store_true", default=False, help="Save MP4 videos only for successful grasp episodes.")
 parser.add_argument("--saved_video_dir", type=str, default=None, help="Directory for success-only grasp videos.")
 parser.add_argument("--saved_video_fps", type=int, default=30, help="Playback FPS for success-only grasp videos.")
+parser.add_argument(
+    "--saved_video_views",
+    type=str,
+    default="front,left,right,back",
+    help="Comma-separated viewer presets for object-v0-Classical success videos. "
+    "Choices: front, left, right, back.",
+)
 parser.add_argument("--max_iterations", type=int, default=None, help="RL Policy training iterations.")
 parser.add_argument("--save_camera_data", action="store_true", default=False, help="Save camera data.")
 parser.add_argument("--output_dir", type=str, default="datasets/sqnet_isaac", help="Dataset output directory.")
-parser.add_argument("--max_episodes", type=int, default=None, help="Stop after collecting this many episodes.")
+parser.add_argument(
+    "--max_episodes",
+    type=int,
+    default=None,
+    help="Stop after this many full environment episodes (init_env resets).",
+)
+parser.add_argument(
+    "--max_successful_grasps",
+    type=int,
+    default=None,
+    help="Stop after saving this many successful grasp videos (--saved_video).",
+)
 parser.add_argument(
     "--topdown_height",
     type=float,
@@ -51,7 +50,7 @@ parser.add_argument("--task", type=str, default="AIR-v0-Grasp", choices=["AIR-v0
                                                                          "AIR-v0-Data", 
                                                                          "AIR-v0-Tele",
                                                                          "AIR-v0-SKRL",
-                                                                         "AIR-v0-Classical",
+                                                                         "object-v0-Classical",
                                                                          "SQ-v0-Data"
                                                                          ], help="Task name.")
 parser.add_argument("--distributed", action="store_true", help="Run training with multiple GPUs or nodes.")
@@ -80,11 +79,13 @@ settings.set("/rtx/realtime/mgpu/autoTiling/enabled", True)
 """Rest everything else."""
 
 import time
-TASK = args_cli.task.split("-")[-1]
 
 if args_cli.task.startswith("SQ-"):
     from isaac_env.sqnet_env_data import SQPickSmData as AIRSim
+elif args_cli.task.startswith("object-"):
+    from isaac_env.object_env_classical import ObjectPickSmClassical as AIRSim
 else:
+    TASK = args_cli.task.split("-")[-1]
     exec(f"from isaac_env.air_env_{TASK.lower()} import AIRPickSm{TASK} as AIRSim")
 
 if __name__ == "__main__":
