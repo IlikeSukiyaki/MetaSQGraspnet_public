@@ -300,7 +300,9 @@ Edit [`isaac_env/object_env_classical/element_cfg.py`](../isaac_env/object_env_c
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `CLASSICAL_OBJ_IDS` | `["001"]` | Object(s) to load |
+| `CLASSICAL_OBJ_IDS` | `["001"]` | Default object pool to load |
+| `--obj_ids` | unset | Runtime override for the object pool, for example `001,010,016` |
+| `NUM_OBJS` | derived | Number of objects in the configured pool |
 | `CLASSICAL_MIN_GRASP_WIDTH_CM` | `1.0` | Reject pinching contacts (important for cylinders like soup cans) |
 | `CLASSICAL_MAX_GRASP_CANDIDATES` | `500` | Max HDF5 candidates to collision-check per selection |
 | `CLASSICAL_OBJ_POSE_OFFSET` | `(0.75, 0.20, 0.08)` | Fixed spawn offset on table |

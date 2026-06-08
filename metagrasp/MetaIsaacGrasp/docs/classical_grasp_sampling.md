@@ -147,6 +147,59 @@ conda activate env_isaaclab
 python run.py --task object-v0-Classical --num_envs 1 --enable_cameras
 ```
 
+### Multi-object runs
+
+`object-v0-Classical` can load a pool of object IDs and randomly select one active object on each episode reset. The active object is spawned at the fixed classical table pose, while inactive objects are moved off the table. Runtime grasp selection uses the active object's ID, so each episode loads grasps from the matching `models_ifl/<id>/textured.obj.hdf5`.
+
+The default pool is `CLASSICAL_OBJ_IDS` in [`isaac_env/object_env_classical/element_cfg.py`](../isaac_env/object_env_classical/element_cfg.py). Override it at runtime with `--obj_ids`:
+
+```bash
+conda activate env_isaaclab
+python run.py --task object-v0-Classical \
+  --obj_ids 001,010,016 \
+  --num_envs 1 --headless --enable_cameras \
+  --saved_video --saved_video_views front,left,right \
+  --max_successful_grasps 3
+```
+
+Object IDs are normalized to three digits, so `--obj_ids 1,10,16` resolves to `001,010,016`.
+
+To add a new object ID:
+
+1. Put the object assets under `models_ifl/<id>/`.
+2. Generate `textured.obj.hdf5` if it is missing:
+
+```bash
+conda activate metagrasp
+python tools/generate_object_grasps.py \
+  --mesh_root /home/sustech/桌面/DSQNet/models_ifl \
+  --categories 010 016 \
+  --gripper_profile hand_e \
+  --gripper_length 5.0 \
+  --num_points 500 \
+  --max_grasps 2000 \
+  --pool_size 1
+```
+
+3. Convert the URDF to the simulation USD expected by the task:
+
+```bash
+conda activate metagrasp
+python urdf_converter.py --input /home/sustech/桌面/DSQNet/models_ifl/010/textured.urdf --headless
+python urdf_converter.py --input /home/sustech/桌面/DSQNet/models_ifl/016/textured.urdf --headless
+```
+
+4. Either pass the object with `--obj_ids` or add it to `CLASSICAL_OBJ_IDS`.
+
+Each object in the pool must have:
+
+| File | Purpose |
+|------|---------|
+| `textured.obj` | Mesh used by the antipodal sampler and runtime collision filter |
+| `textured.obj.hdf5` | Generated grasp database |
+| `textured.urdf` | Source for USD conversion |
+| `orbit_obj.usd` | Isaac simulation asset loaded by `object-v0-Classical` |
+
 ### Runtime grasp selection
 
 When the state machine reaches **`choose_object`**, [`isaac_env/object_env_classical/env.py`](../isaac_env/object_env_classical/env.py) calls `grasp_runtime.select_best_grasp(...)` with the live object link pose, table collision filter, ranked retry (`attempt`), and minimum jaw width. See [classical_grasp_pose_logistics.md](./classical_grasp_pose_logistics.md) for the full pipeline.

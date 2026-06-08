@@ -45,6 +45,13 @@ parser.add_argument(
     help="SQ top-down camera height above the table (meters). "
     "Default: TOPDOWN_CAMERA_HEIGHT in isaac_env/sqnet_env_data/element_cfg.py.",
 )
+parser.add_argument(
+    "--obj_ids",
+    type=str,
+    default=None,
+    help="Comma-separated object IDs for object-v0-Classical (e.g. 001,010,016). "
+    "Overrides CLASSICAL_OBJ_IDS in isaac_env/object_env_classical/element_cfg.py.",
+)
 parser.add_argument("--task", type=str, default="AIR-v0-Grasp", choices=["AIR-v0-Grasp", 
                                                                          "AIR-v0-SB3", 
                                                                          "AIR-v0-Data", 

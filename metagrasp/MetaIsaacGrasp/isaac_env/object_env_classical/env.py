@@ -19,7 +19,7 @@ from .element_cfg import (
     ROBOT_NAME,
     desk_center,
 )
-from .env_cfg import CLASSICAL_VIDEO_VIEW_PRESETS, CellEnvCfg
+from .env_cfg import CLASSICAL_VIDEO_VIEW_PRESETS, CellEnvCfg, reset_classical_random_object
 from .wp_cfg import infer_state_machine_disc
 
 
@@ -96,7 +96,10 @@ class ObjectEnvClassical(AIREnvBase):
         for env_id_tensor in ids:
             env_id = int(env_id_tensor.detach().cpu().item())
             if int(self.obj_chosen[env_id].item()) < 0:
-                self.obj_chosen[env_id] = 0
+                reset_classical_random_object(
+                    self,
+                    torch.tensor([env_id], device=self.device, dtype=torch.int64),
+                )
 
             obj_idx = int(self.obj_chosen[env_id].item())
             obj_id = self.obj_label[obj_idx]
