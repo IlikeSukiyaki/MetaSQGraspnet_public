@@ -39,21 +39,31 @@ python tools/extract_partial_pc.py \
   --camera both --mask auto --color instance
 
 
-# Classical antipodal grasp smoke task (see docs/classical_grasp_sampling.md)
+# Classical antipodal grasp smoke task
+# Full workflow: docs/ur_grasp_database_workflow.md
+# CLI details: docs/classical_grasp_sampling.md
+python tools/setup_ur_grasp_database.py \
+  --source /home/sustech/桌面/DSQNet/models_ifl \
+  --objects 001,004,010,016 \
+  --overwrite
+
 python tools/generate_object_grasps.py \
-  --mesh_root /home/sustech/桌面/DSQNet/models_ifl \
-  --categories 001 \
+  --mesh_root UR_grasp_database \
+  --categories 001 004 010 016 \
   --gripper_profile hand_e \
   --gripper_length 5.0 \
   --num_points 500 \
   --max_grasps 2000 \
   --pool_size 1
 
-python urdf_converter.py --input /home/sustech/桌面/DSQNet/models_ifl/001/textured.urdf
+python urdf_converter.py --input UR_grasp_database/001/textured.urdf
+python urdf_converter.py --input UR_grasp_database/004/textured.urdf
+python urdf_converter.py --input UR_grasp_database/010/textured.urdf
+python urdf_converter.py --input UR_grasp_database/016/textured.urdf
 
 python run.py --task object-v0-Classical --num_envs 1 --enable_cameras
 
-python run.py --task object-v0-Classical --num_envs 1 --headless --enable_cameras --saved_video --max_successful_grasps 5
+python run.py --task object-v0-Classical --obj_ids 001,004,010,016 --num_envs 1 --headless --enable_cameras --saved_video --max_successful_grasps 5
 
 
 python run.py --task object-v0-Classical --num_envs 1 \

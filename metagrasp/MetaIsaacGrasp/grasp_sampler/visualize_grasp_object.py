@@ -8,12 +8,19 @@ import pathlib
 import h5py
 import random
 import os
+import sys
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from grasp_sampler.gripper_profiles import get_profile
+from grasp_sampler.runtime import quaternion_wxyz_to_matrix
 
 # Gripper Parameters ParallelJaw and Suction Cup
-GRIPPER_HEIGHT = 11.21 # cm
-AREA_CENTER = 0.8 # cm
-PREGRASP_PARALLEL_DISTANCE = 3 # cm note: this is added to the predicted gripper width.
-GRIPPER_WIDTH_MAX = 8 #cm
+ACTIVE_GRIPPER_PROFILE = get_profile("hand_e")
+PREGRASP_PARALLEL_DISTANCE = ACTIVE_GRIPPER_PROFILE.pregrasp_extra_cm # cm, added to the predicted gripper width.
+GRIPPER_WIDTH_MAX = ACTIVE_GRIPPER_PROFILE.width_max_cm # cm
 SUCTIONCUP_HEIGHT = 11.21 #cm
 SUCTIONCUP_APPROACH_DISTANCE = 2 # cm
 
@@ -36,35 +43,62 @@ def random_rgb_color(seed, score=1.0):
 
 
 def create_easy_gripper(
-        color=[0, 255, 0, 140], sections=6, show_axis=False, width=None):
+        color=[0, 255, 0, 140], sections=6, show_axis=False, width=None, frame="sampler"):
     if width:
-        w = min((width + PREGRASP_PARALLEL_DISTANCE)/2, 4.1)
+        w = min((width + PREGRASP_PARALLEL_DISTANCE) / 2, GRIPPER_WIDTH_MAX / 2)
     else:
-        w = 4.1
+        w = GRIPPER_WIDTH_MAX / 2
 
-    l_center_grasps = GRIPPER_HEIGHT - AREA_CENTER  # gripper length till grasp contact
-
-    cfl = trimesh.creation.cylinder(
-        radius=0.1,
-        sections=sections,
-        segment=[[w, -7.27595772e-10, 6.59999996],
-                 [w, -7.27595772e-10, l_center_grasps]])
-    cfr = trimesh.creation.cylinder(
-        radius=0.1,
-        sections=sections,
-        segment=[[-w, -7.27595772e-10, 6.59999996],
-                 [-w, -7.27595772e-10, l_center_grasps]])
-    # arm
-    cb1 = trimesh.creation.cylinder(
-        radius=0.1, sections=sections,
-        segment=[[0, 0, 0],
-                 [0, 0, 6.59999996]])
-    # queer
-    cb2 = trimesh.creation.cylinder(
-        radius=0.1,
-        sections=sections,
-        segment=[[-w, 0, 6.59999996],
-                 [w, 0, 6.59999996]])
+    if frame == "ee":
+        finger_back = -6.0
+        palm_back = -6.0
+        body_back = -9.5
+        # Loaded Isaac EE frame: local +X opens the jaws, local +Y points from
+        # palm to fingertips, so fingers extend backward along -Y.
+        finger_left = trimesh.creation.cylinder(
+            radius=0.1,
+            sections=sections,
+            segment=[[w, 0.0, 0.0],
+                     [w, finger_back, 0.0]])
+        finger_right = trimesh.creation.cylinder(
+            radius=0.1,
+            sections=sections,
+            segment=[[-w, 0.0, 0.0],
+                     [-w, finger_back, 0.0]])
+        crossbar = trimesh.creation.cylinder(
+            radius=0.1,
+            sections=sections,
+            segment=[[-w, palm_back, 0.0],
+                     [w, palm_back, 0.0]])
+        cb1 = trimesh.creation.cylinder(
+            radius=0.1,
+            sections=sections,
+            segment=[[0, body_back, 0.0],
+                     [0, palm_back, 0.0]])
+    else:
+        finger_back_z = -6.0
+        palm_z = -6.0
+        body_back_z = -9.5
+        finger_left = trimesh.creation.cylinder(
+            radius=0.1,
+            sections=sections,
+            segment=[[w, 0.0, 0.0],
+                     [w, 0.0, finger_back_z]])
+        finger_right = trimesh.creation.cylinder(
+            radius=0.1,
+            sections=sections,
+            segment=[[-w, 0.0, 0.0],
+                     [-w, 0.0, finger_back_z]])
+        crossbar = trimesh.creation.cylinder(
+            radius=0.1,
+            sections=sections,
+            segment=[[-w, 0, palm_z],
+                     [w, 0, palm_z]])
+        cb1 = trimesh.creation.cylinder(
+            radius=0.1,
+            sections=sections,
+            segment=[[0, 0, body_back_z],
+                     [0, 0, palm_z]])
     # coordinate system
     if show_axis:
         cos_system = trimesh.creation.axis(
@@ -73,29 +107,25 @@ def create_easy_gripper(
             origin_color=None,
             axis_radius=None,
             axis_length=None)
-        tmp = trimesh.util.concatenate([cb1, cb2, cfr, cfl, cos_system])
+        tmp = trimesh.util.concatenate([cb1, crossbar, finger_right, finger_left, cos_system])
     else:
-        tmp = trimesh.util.concatenate([cb1, cb2, cfr, cfl])
+        tmp = trimesh.util.concatenate([cb1, crossbar, finger_right, finger_left])
     tmp.visual.face_colors = color
     return tmp
 
 
-def convert_to_franka_6DOF(vec_a, vec_b, contact_pt, width):
-    """Convert Contact-Point Pregrasp representation to 6DOF Gripper Pose (4x4)."""
-    # get 3rd unit vector
-    c_ = np.cross(vec_a, vec_b)
-    # rotation matrix
-    R_ = [[vec_b[0], c_[0], vec_a[0]],
-          [vec_b[1], c_[1], vec_a[1]],
-          [vec_b[2], c_[2], vec_a[2]]]
-    # translation t
-    t_ = contact_pt + width/2 * vec_b + (GRIPPER_HEIGHT-AREA_CENTER) * vec_a * (-1)
-    # create 4x4 transform matrix of grasp
-    pregrasp_transform_ = [[R_[0][0], R_[0][1], R_[0][2], t_[0]],
-                           [R_[1][0], R_[1][1], R_[1][2], t_[1]],
-                           [R_[2][0], R_[2][1], R_[2][2], t_[2]],
-                           [0.0, 0.0, 0.0, 1.0]]
-    return np.array(pregrasp_transform_)
+def convert_to_gripper_6d(vec_a, vec_b, contact_pt, width):
+    """Convert Contact-Point Pregrasp representation to the active gripper frame."""
+    return ACTIVE_GRIPPER_PROFILE.convert_to_gripper_6d(vec_a, vec_b, contact_pt, width)
+
+
+def convert_sampler_to_ee_frame(transform_cm):
+    """Convert a sampler-frame gripper transform to the executed EE orientation."""
+    ee_pose = ACTIVE_GRIPPER_PROFILE.gripper_pose_cm_to_ee_pose(transform_cm).cpu().numpy()
+    ee_transform = np.eye(4, dtype=float)
+    ee_transform[:3, :3] = quaternion_wxyz_to_matrix(ee_pose[3:7])
+    ee_transform[:3, 3] = transform_cm[:3, 3]
+    return ee_transform
 
 
 def read_in_mesh_config(file, parallel=False, suctioncup=False, simulation=False, keypts_byhand=False, keypts_com=False, analytical=False):
@@ -127,7 +157,7 @@ def load_single_mesh(file):
     return mesh
 
 
-def from_contact_to_6D(grasp_config, obj_to_world_transform=None):
+def from_contact_to_6D(grasp_config, obj_to_world_transform=None, frame="sampler"):
     """
     Convert from hdf5 contact representation to 4x4 Matrix in World COS.
     """
@@ -146,11 +176,13 @@ def from_contact_to_6D(grasp_config, obj_to_world_transform=None):
     parallel_width = grasp_config[9]
     print("parallel width", parallel_width)
 
-    parallel_pregrasp_transform = convert_to_franka_6DOF(
+    parallel_pregrasp_transform = convert_to_gripper_6d(
         vec_a=parallel_vec_a,
         vec_b=parallel_vec_b,
         contact_pt=parallel_contact_pt1,
         width=parallel_width)
+    if frame == "ee":
+        parallel_pregrasp_transform = convert_sampler_to_ee_frame(parallel_pregrasp_transform)
 
     if obj_to_world_transform is None:
         obj_to_world_transform = np.array([
@@ -257,9 +289,9 @@ def create_contact_pose(grasp_config):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--root", type=str, default="/home/yitian/Research/simulation_isaaclab_rl/models")
-    parser.add_argument("--dataset_name", type=str, default="models_ifl")
-    parser.add_argument("--object", type=str, default="047")
+    parser.add_argument("--root", type=str, default=str(REPO_ROOT / "UR_grasp_database"))
+    parser.add_argument("--dataset_name", type=str, default=".")
+    parser.add_argument("--object", type=str, default="001")
     parser.add_argument("--parallel_grasps", default=True)
     parser.add_argument("--keypts_byhand", action="store_true")
     parser.add_argument("--keypts_com", action="store_true")
@@ -270,11 +302,25 @@ if __name__ == "__main__":
     parser.add_argument("--score_min", type=float, default=0.0, help="lower bound of interval")
     parser.add_argument("--score_max", type=float, default=1.0, help="upper bound of interval")
     parser.add_argument("--max_grasps", type=int, default=24000, help="max grasps to show.",)
+    parser.add_argument(
+        "--frame",
+        choices=["sampler", "ee"],
+        default="ee",
+        help="Draw grasps in the raw sampler frame or the active gripper EE frame.",
+    )
+    parser.add_argument("--gripper_profile", type=str, default="hand_e", choices=["hand_e", "franka", "2f85"])
+    parser.add_argument("--hdf5_suffix", type=str, default=None)
     args = parser.parse_args()
+
+    ACTIVE_GRIPPER_PROFILE = get_profile(args.gripper_profile)
+    PREGRASP_PARALLEL_DISTANCE = ACTIVE_GRIPPER_PROFILE.pregrasp_extra_cm
+    GRIPPER_WIDTH_MAX = ACTIVE_GRIPPER_PROFILE.width_max_cm
+    if args.hdf5_suffix is None:
+        args.hdf5_suffix = ACTIVE_GRIPPER_PROFILE.hdf5_suffix
 
     PATH_TO_DATA = pathlib.Path(os.path.join(args.root, args.dataset_name))
     PATH_TO_OBJ = PATH_TO_DATA / args.object / "textured.obj"
-    PATH_TO_HDF5 = PATH_TO_DATA / args.object / "textured.obj.hdf5"
+    PATH_TO_HDF5 = PATH_TO_DATA / args.object / f"textured.obj{args.hdf5_suffix}.hdf5"
 
     if args.l2norm:
         args.simulation = True
@@ -323,7 +369,7 @@ if __name__ == "__main__":
                 print("WARNING : no score type selected")
                 exit()
             # Transform of gripper COS (G) relative to world (W)
-            T_W_G = from_contact_to_6D(parallel_grasp_config)
+            T_W_G = from_contact_to_6D(parallel_grasp_config, frame=args.frame)
             grasp_width = parallel_grasp_config[9]
             # add to scene
             if score >= args.score_min and score <= args.score_max:
@@ -333,7 +379,8 @@ if __name__ == "__main__":
                                 score, 150),
                         sections=3,
                         show_axis=True,
-                        width=grasp_width),
+                        width=grasp_width,
+                        frame=args.frame),
                     transform=T_W_G)
                 score_counter += 1
                 trimesh_scene.add_geometry(

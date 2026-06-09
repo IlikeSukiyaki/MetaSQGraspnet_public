@@ -156,6 +156,12 @@ class AIREnvBase(ManagerBasedRLEnv):
         frame_marker_grasp.markers["frame"].scale = (marker_scale, marker_scale, marker_scale)
         self.grasp_marker = VisualizationMarkers(
             frame_marker_grasp.replace(prim_path="/Visuals/grasp"))
+
+        # Visualize the selected grasp command, before reach/approach offsets.
+        frame_marker_commanded_grasp = FRAME_MARKER_CFG.copy()
+        frame_marker_commanded_grasp.markers["frame"].scale = (marker_scale, marker_scale, marker_scale)
+        self.commanded_grasp_marker = VisualizationMarkers(
+            frame_marker_commanded_grasp.replace(prim_path="/Visuals/commanded_grasp"))
         
         # Camera markers
         frame_marker_cfg_cam = FRAME_MARKER_CFG.copy()
@@ -685,9 +691,13 @@ class AIREnvBase(ManagerBasedRLEnv):
             ee_goals[:, 0:3] + self.scene.env_origins + self.robot_origin,
             ee_goals[:, 3:7],
         )
+        self.commanded_grasp_marker.visualize(
+            self.grasp_pose[:, 0:3] + self.scene.env_origins + self.robot_origin,
+            self.grasp_pose[:, 3:7],
+        )
         self.grasp_marker.visualize(
-        self._get_ee_pose()[:, :3] + self.scene.env_origins + self.robot_origin,
-        self._get_ee_pose()[:, 3:],
+            self._get_ee_pose()[:, :3] + self.scene.env_origins + self.robot_origin,
+            self._get_ee_pose()[:, 3:],
         )
 
         # Update camera marker

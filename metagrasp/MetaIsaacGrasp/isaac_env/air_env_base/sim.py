@@ -60,11 +60,14 @@ class AIRPickSm:
         video_view_presets = None
         if (
             saved_video
-            and args_cli.task == "object-v0-Classical"
+            and args_cli.task.startswith("object-")
             and getattr(args_cli, "saved_video_views", None)
         ):
             try:
-                from isaac_env.object_env_classical.env_cfg import CLASSICAL_VIDEO_VIEW_PRESETS
+                if args_cli.task == "object-v1-Classical-2f85":
+                    from isaac_env.object_env_classical_2f85.env_cfg import CLASSICAL_VIDEO_VIEW_PRESETS
+                else:
+                    from isaac_env.object_env_classical.env_cfg import CLASSICAL_VIDEO_VIEW_PRESETS
             except ImportError:
                 CLASSICAL_VIDEO_VIEW_PRESETS = {}
             requested = [name.strip() for name in args_cli.saved_video_views.split(",") if name.strip()]

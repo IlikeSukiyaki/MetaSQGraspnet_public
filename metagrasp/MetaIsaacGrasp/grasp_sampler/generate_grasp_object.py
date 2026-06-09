@@ -49,9 +49,10 @@ def get_pj_collission_manager(grasp_width, transform):
     )
 
 
-def create_file(rootdir, filepath):
+def create_file(rootdir, filepath, hdf5_suffix=""):
     # create object
-    path = rootdir / str(str(filepath) + ".hdf5")
+    filepath = pathlib.Path(filepath)
+    path = rootdir / filepath.with_name(filepath.name + hdf5_suffix + ".hdf5")
 
     try:
         f = h5py.File(str(path), 'r+')

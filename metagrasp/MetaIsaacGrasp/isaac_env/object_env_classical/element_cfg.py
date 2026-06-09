@@ -3,31 +3,37 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import RigidObjectCfg
 
+from grasp_sampler.database_paths import (
+    legacy_models_ifl_roots,
+    normalize_obj_id,
+    resolve_grasp_database_root,
+)
 from isaac_env.air_env_base.element_cfg import *  # noqa: F403
+from isaac_env.gripper_task_configs.hand_e import apply_to_element_cfg
 
 
 REMOTE_AGENT = False
 READ_FROM_HDF5 = True
 N_MULTIPLE_CAM = 1
+apply_to_element_cfg(globals())
 
 CLASSICAL_OBJ_IDS = ["001"]
 
 
 def _resolve_model_path() -> str:
-    local_model_path = Path(HOME_PATH) / "models" / "models_ifl"  # noqa: F405
-    if local_model_path.exists():
-        return str(local_model_path)
+    database_root = resolve_grasp_database_root()
+    if database_root.exists():
+        return str(database_root)
 
-    workspace_model_path = Path(HOME_PATH).parents[1] / "models_ifl"  # noqa: F405
-    if workspace_model_path.exists():
-        return str(workspace_model_path)
+    for legacy_root in legacy_models_ifl_roots():
+        if legacy_root.exists():
+            return str(legacy_root)
 
-    return str(local_model_path)
+    return str(database_root)
 
 
 MODEL_PATH = _resolve_model_path()
@@ -37,19 +43,23 @@ MGN_PATHS = []
 OBJ_PATH = MGN_PATHS
 
 CLASSICAL_GRASP_MESH_ROOT = MODEL_PATH
-CLASSICAL_GRIPPER_PROFILE = "hand_e"
-CLASSICAL_GRIPPER_COLLISION_ROOT = os.path.join(
-    HOME_PATH,  # noqa: F405
-    "models",
-    "Gripper",
-    "hande",
-    "robotiq_hande_description",
-    "meshes",
-)
 CLASSICAL_MAX_GRASP_CANDIDATES = 500
 # Prefer grasps with at least this jaw opening (cm).  Filters out pinching contacts
 # that score highly but cannot support a lift (common on cylindrical objects).
 CLASSICAL_MIN_GRASP_WIDTH_CM = 1.0
+CLASSICAL_PREFER_TOPDOWN = True
+CLASSICAL_TOPDOWN_WEIGHT = 0.5
+# Require near top-down approaches whenever such collision-free candidates exist.
+# 1.0 is straight down, 0.0 is horizontal.
+CLASSICAL_MIN_TOPDOWN_ALIGNMENT = 0.75
+CLASSICAL_TOPDOWN_AXIS = (0.0, 0.0, -1.0)
+
+# Classical pick state-machine motion tuning.  Keep these local to the
+# classical task so legacy grasp/data tasks do not change behavior.
+APPROACH_DISTANCE = 0.08
+CLASSICAL_APPROACH_DURATION = 1.25
+CLASSICAL_APPROACH_TIMEOUT = 2.0
+CLASSICAL_PREGRASP_HOLD_TIME = 0.25
 
 # Fixed demo spawn: offset from the placeholder default root (ROBOT_POS), meters.
 # Center of the reachable table patch, low z for gentle contact (no drop / tumble).
@@ -70,9 +80,9 @@ def validate_classical_assets() -> None:
         if not os.path.exists(os.path.join(MODEL_PATH, obj_id, "textured.obj"))
     ]
     missing_grasps = [
-        os.path.join(MODEL_PATH, obj_id, "textured.obj.hdf5")
+        os.path.join(MODEL_PATH, obj_id, f"textured.obj{CLASSICAL_HDF5_SUFFIX}.hdf5")
         for obj_id in OBJ_LABLE
-        if not os.path.exists(os.path.join(MODEL_PATH, obj_id, "textured.obj.hdf5"))
+        if not os.path.exists(os.path.join(MODEL_PATH, obj_id, f"textured.obj{CLASSICAL_HDF5_SUFFIX}.hdf5"))
     ]
     if missing_usd or missing_meshes or missing_grasps:
         details = []
@@ -89,10 +99,7 @@ def validate_classical_assets() -> None:
 
 
 def _normalize_classical_obj_id(obj_id: str) -> str:
-    obj_id = str(obj_id).strip()
-    if not obj_id:
-        raise ValueError("Object IDs for object-v0-Classical cannot be empty.")
-    return obj_id.zfill(3) if obj_id.isdigit() else obj_id
+    return normalize_obj_id(obj_id)
 
 
 def _make_object_cfg(obj_id: str, usd_path: str) -> RigidObjectCfg:

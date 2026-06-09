@@ -1,0 +1,59 @@
+{
+  "object_id": "004",
+  "source_dir": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/004",
+  "dest_dir": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaIsaacGrasp/UR_grasp_database/004",
+  "mode": "copy",
+  "generated_at": "2026-06-08T13:26:09.369546+00:00",
+  "files": [
+    {
+      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/004/.asset_hash",
+      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaIsaacGrasp/UR_grasp_database/004/.asset_hash",
+      "status": "copied"
+    },
+    {
+      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/004/config.yaml",
+      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaIsaacGrasp/UR_grasp_database/004/config.yaml",
+      "status": "copied"
+    },
+    {
+      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/004/configuration/materials/textures/texture_map.png",
+      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaIsaacGrasp/UR_grasp_database/004/configuration/materials/textures/texture_map.png",
+      "status": "copied"
+    },
+    {
+      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/004/texture_map.png",
+      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaIsaacGrasp/UR_grasp_database/004/texture_map.png",
+      "status": "copied"
+    },
+    {
+      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/004/textured.mtl",
+      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaIsaacGrasp/UR_grasp_database/004/textured.mtl",
+      "status": "copied"
+    },
+    {
+      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/004/textured.obj",
+      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaIsaacGrasp/UR_grasp_database/004/textured.obj",
+      "status": "copied"
+    },
+    {
+      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/004/textured.urdf",
+      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaIsaacGrasp/UR_grasp_database/004/textured.urdf",
+      "status": "copied"
+    },
+    {
+      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/004/textured_simplified.obj",
+      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaIsaacGrasp/UR_grasp_database/004/textured_simplified.obj",
+      "status": "copied"
+    },
+    {
+      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/004/textured_simplified.obj.mtl",
+      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaIsaacGrasp/UR_grasp_database/004/textured_simplified.obj.mtl",
+      "status": "copied"
+    },
+    {
+      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/004/textures/texture_map.png",
+      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaIsaacGrasp/UR_grasp_database/004/textures/texture_map.png",
+      "status": "copied"
+    }
+  ]
+}

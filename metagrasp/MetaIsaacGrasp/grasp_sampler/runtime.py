@@ -18,6 +18,7 @@ import numpy as np
 import torch
 import trimesh
 
+from grasp_sampler.database_paths import legacy_models_ifl_roots, resolve_grasp_database_root
 from grasp_sampler.gripper_profiles import ParallelJawProfile, get_profile
 
 
@@ -31,38 +32,47 @@ class GraspSelection:
     contact_pose_cm: np.ndarray
     gripper_pose_cm: np.ndarray
     width_cm: float
+    approach_alignment: float
+    grasp_config: np.ndarray
 
 
 def resolve_mesh_root(mesh_root: str | Path | None = None) -> Path:
-    """Resolve the IFL mesh root used by the sampler and Isaac task."""
+    """Resolve the object asset root used by the sampler and Isaac task."""
     if mesh_root is not None:
         return Path(mesh_root).expanduser().resolve()
 
-    repo_root = Path(__file__).resolve().parents[1]
-    local_root = repo_root / "models" / "models_ifl"
-    if local_root.exists():
-        return local_root
+    database_root = resolve_grasp_database_root()
+    if database_root.exists():
+        return database_root
 
-    workspace_root = repo_root.parents[1] / "models_ifl"
-    if workspace_root.exists():
-        return workspace_root
+    for legacy_root in legacy_models_ifl_roots():
+        if legacy_root.exists():
+            return legacy_root
 
-    return local_root
+    return database_root
 
 
 def object_mesh_path(obj_id: str, mesh_root: str | Path | None = None) -> Path:
     return resolve_mesh_root(mesh_root) / obj_id / "textured.obj"
 
 
-def object_hdf5_path(obj_id: str, mesh_root: str | Path | None = None) -> Path:
-    return resolve_mesh_root(mesh_root) / obj_id / "textured.obj.hdf5"
+def object_hdf5_path(
+    obj_id: str,
+    mesh_root: str | Path | None = None,
+    hdf5_suffix: str = "",
+) -> Path:
+    return resolve_mesh_root(mesh_root) / obj_id / f"textured.obj{hdf5_suffix}.hdf5"
 
 
 @lru_cache(maxsize=32)
-def load_mesh_grasps(obj_id: str, mesh_root: str | Path | None = None) -> tuple[trimesh.Trimesh, dict]:
+def load_mesh_grasps(
+    obj_id: str,
+    mesh_root: str | Path | None = None,
+    hdf5_suffix: str = "",
+) -> tuple[trimesh.Trimesh, dict]:
     """Load a scaled object mesh and its HDF5 antipodal grasps."""
     mesh_path = object_mesh_path(obj_id, mesh_root)
-    hdf5_path = object_hdf5_path(obj_id, mesh_root)
+    hdf5_path = object_hdf5_path(obj_id, mesh_root, hdf5_suffix=hdf5_suffix)
     if not mesh_path.exists():
         raise FileNotFoundError(f"Missing object mesh: {mesh_path}")
     if not hdf5_path.exists():
@@ -264,7 +274,7 @@ def filter_grasps_for_pose(
     max_candidates: int = 500,
     profile: str | ParallelJawProfile | None = None,
     robot_root_pos_m: Iterable[float] | None = None,
-) -> list[tuple[float, np.ndarray, np.ndarray, float]]:
+) -> list[tuple[float, np.ndarray, np.ndarray, float, np.ndarray]]:
     gripper_profile = get_profile(profile, mesh_root=collision_root)
     grasps = np.asarray(grasp_dict["paralleljaw_pregrasp_transform"])
     scores = np.asarray(grasp_dict["paralleljaw_pregrasp_score"], dtype=float)
@@ -299,29 +309,30 @@ def filter_grasps_for_pose(
             profile=gripper_profile,
         )
         if is_free:
-            selections.append((raw_score, gripper_pose, contact_pose, width))
+            selections.append((raw_score, gripper_pose, contact_pose, width, grasps[idx]))
 
     return selections
 
 
-def gripper_pose_cm_to_ee_pose(gripper_pose_cm: np.ndarray, device: torch.device | str = "cpu") -> torch.Tensor:
-    """Convert sampler frame to Isaac command pose.
+def gripper_pose_cm_to_ee_pose(
+    gripper_pose_cm: np.ndarray,
+    device: torch.device | str = "cpu",
+    profile: str | ParallelJawProfile | None = None,
+) -> torch.Tensor:
+    """Convert sampler frame to the active profile's Isaac command pose."""
+    return get_profile(profile).gripper_pose_cm_to_ee_pose(gripper_pose_cm, device=device)
 
-    The grasp state machine backs away along local +Y.  The sampler's approach
-    vector is local +Z, so the command orientation remaps columns to
-    [baseline, approach, baseline x approach].
-    """
-    baseline = gripper_pose_cm[:3, 0]
+
+def topdown_alignment(
+    gripper_pose_cm: np.ndarray,
+    down_axis: Iterable[float] = (0.0, 0.0, -1.0),
+) -> float:
+    """Return 1.0 for a straight top-down approach, 0.0 for side approaches."""
     approach = gripper_pose_cm[:3, 2]
-    baseline = baseline / (np.linalg.norm(baseline) + 1e-12)
     approach = approach / (np.linalg.norm(approach) + 1e-12)
-    up = np.cross(baseline, approach)
-    up = up / (np.linalg.norm(up) + 1e-12)
-    rotation = np.stack([baseline, approach, up], axis=1)
-    quat = matrix_to_quaternion_wxyz(rotation)
-    translation_m = gripper_pose_cm[:3, 3] / 100.0
-    pose = np.concatenate([translation_m, quat], axis=0)
-    return torch.tensor(pose, dtype=torch.float32, device=device)
+    down = np.asarray(tuple(down_axis), dtype=float)
+    down = down / (np.linalg.norm(down) + 1e-12)
+    return float(np.dot(approach, down))
 
 
 def select_best_grasp(
@@ -335,10 +346,20 @@ def select_best_grasp(
     profile: str | ParallelJawProfile | None = None,
     robot_root_pos_m: Iterable[float] | None = None,
     rank: int = 0,
+    hdf5_suffix: str | None = None,
     min_width_cm: float = 0.0,
+    prefer_topdown: bool = True,
+    topdown_weight: float = 0.5,
+    min_topdown_alignment: float = 0.0,
+    down_axis: Iterable[float] = (0.0, 0.0, -1.0),
 ) -> GraspSelection | None:
     gripper_profile = get_profile(profile, mesh_root=collision_root)
-    mesh, grasp_dict = load_mesh_grasps(obj_id, str(resolve_mesh_root(mesh_root)))
+    resolved_hdf5_suffix = gripper_profile.hdf5_suffix if hdf5_suffix is None else hdf5_suffix
+    mesh, grasp_dict = load_mesh_grasps(
+        obj_id,
+        str(resolve_mesh_root(mesh_root)),
+        resolved_hdf5_suffix,
+    )
     selections = filter_grasps_for_pose(
         mesh,
         grasp_dict,
@@ -355,12 +376,29 @@ def select_best_grasp(
     pool = [item for item in selections if item[3] >= min_width_cm]
     if not pool:
         pool = list(selections)
-    ranked = sorted(pool, key=lambda item: (item[0], item[3]), reverse=True)
+
+    if prefer_topdown and min_topdown_alignment > 0.0:
+        topdown_pool = [
+            item for item in pool
+            if topdown_alignment(item[1], down_axis) >= min_topdown_alignment
+        ]
+        if topdown_pool:
+            pool = topdown_pool
+
+    def _rank_key(item: tuple[float, np.ndarray, np.ndarray, float, np.ndarray]) -> tuple[float, float]:
+        raw_score, gripper_pose_cm, _, width, _ = item
+        alignment = topdown_alignment(gripper_pose_cm, down_axis)
+        combined_score = raw_score
+        if prefer_topdown:
+            combined_score += topdown_weight * alignment
+        return combined_score, width
+
+    ranked = sorted(pool, key=_rank_key, reverse=True)
 
     deduped = []
     seen_pose_keys = set()
     for item in ranked:
-        _, gripper_pose_cm, _, _ = item
+        _, gripper_pose_cm, _, _, _ = item
         pose_key = tuple(np.round(gripper_pose_cm[:3, 3], 2))
         if pose_key in seen_pose_keys:
             continue
@@ -370,8 +408,9 @@ def select_best_grasp(
     if rank >= len(deduped):
         return None
 
-    raw_score, gripper_pose_cm, contact_pose_cm, width_cm = deduped[rank]
+    raw_score, gripper_pose_cm, contact_pose_cm, width_cm, grasp_config = deduped[rank]
     score_max = max(item[0] for item in selections) + 1e-12
+    alignment = topdown_alignment(gripper_pose_cm, down_axis)
     return GraspSelection(
         pose=gripper_profile.gripper_pose_cm_to_ee_pose(gripper_pose_cm, device=device),
         score=float(raw_score / score_max),
@@ -379,4 +418,6 @@ def select_best_grasp(
         contact_pose_cm=contact_pose_cm,
         gripper_pose_cm=gripper_pose_cm,
         width_cm=width_cm,
+        approach_alignment=alignment,
+        grasp_config=grasp_config,
     )
