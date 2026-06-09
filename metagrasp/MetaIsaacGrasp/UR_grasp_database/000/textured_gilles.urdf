@@ -1,0 +1,17 @@
+<?xml version="1.0" ?>
+<robot name="000" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <link name="base">
+    <visual>
+      <geometry>
+        <mesh filename="textured_simplified.obj" scale="1 1 1"/>
+      </geometry>
+       <material filename="textured.mtl">
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+	<mesh filename="textured_simplified.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

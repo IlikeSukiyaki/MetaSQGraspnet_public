@@ -4,6 +4,8 @@ This guide explains how to **generate**, **visualize**, and **execute** antipoda
 
 For **coordinate frames, pose transformation chain, collision filtering, retry logic, and troubleshooting**, see [classical_grasp_pose_logistics.md](./classical_grasp_pose_logistics.md).
 
+For the **end-to-end curated database workflow** (`UR_grasp_database/`), see [ur_grasp_database_workflow.md](./ur_grasp_database_workflow.md).
+
 The pipeline targets the current Isaac setup:
 
 | Setting | Value |
@@ -43,24 +45,44 @@ flowchart LR
 
 - Conda env **`metagrasp`** — grasp generation and visualization
 - Conda env **`env_isaaclab`** — Isaac Sim execution
-- Object assets under `models_ifl/<id>/`:
+- Curated object assets under `UR_grasp_database/<id>/`:
   - `textured.obj` — mesh used for sampling
   - `textured.obj.hdf5` — generated grasp database
   - `orbit_obj.usd` — object in simulation (create with `urdf_converter.py`)
 
 ---
 
-## 1. Generate grasp poses
+## 1. Seed the curated asset database
+
+Tool: [`tools/setup_ur_grasp_database.py`](../tools/setup_ur_grasp_database.py)
+
+```bash
+cd /home/sustech/桌面/DSQNet/metagrasp/MetaIsaacGrasp
+conda activate metagrasp
+
+python tools/setup_ur_grasp_database.py \
+  --source /home/sustech/桌面/DSQNet/models_ifl \
+  --objects 001,004,010,016 \
+  --overwrite
+```
+
+This copies mesh/URDF/texture sidecars into `UR_grasp_database/<id>/` and skips
+generated outputs (`textured.obj.hdf5`, `orbit_obj.usd`) so they can be rebuilt
+with the current Hand-E settings.
+
+---
+
+## 2. Generate grasp poses
 
 Tool: [`tools/generate_object_grasps.py`](../tools/generate_object_grasps.py)
 
 ```bash
-cd metagrasp/MetaIsaacGrasp
+cd /home/sustech/桌面/DSQNet/metagrasp/MetaIsaacGrasp
 conda activate metagrasp
 
 python tools/generate_object_grasps.py \
-  --mesh_root /home/sustech/桌面/DSQNet/models_ifl \
-  --categories 001 \
+  --mesh_root UR_grasp_database \
+  --categories 001 004 010 016 \
   --gripper_profile hand_e \
   --gripper_length 5.0 \
   --num_points 500 \
@@ -98,7 +120,7 @@ Optional: set `HAND_E_USE_STL_COLLISION=1` to use Hand-E STL meshes for collisio
 
 ---
 
-## 2. Visualize grasps
+## 3. Visualize grasps
 
 Script: [`grasp_sampler/visualize_grasp_object.py`](../grasp_sampler/visualize_grasp_object.py)
 
@@ -109,9 +131,10 @@ conda activate metagrasp
 cd metagrasp/MetaIsaacGrasp
 
 python grasp_sampler/visualize_grasp_object.py \
-  --root /home/sustech/桌面/DSQNet \
-  --dataset_name models_ifl \
+  --root UR_grasp_database \
+  --dataset_name . \
   --object 001 \
+  --frame ee \
   --max_grasps 50 \
   --score_min 0.5
 ```
@@ -120,24 +143,25 @@ python grasp_sampler/visualize_grasp_object.py \
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--root` | — | Parent directory of the dataset |
-| `--dataset_name` | `models_ifl` | Dataset folder name |
-| `--object` | `047` | Object category ID |
+| `--root` | `UR_grasp_database` | Parent directory of the dataset |
+| `--dataset_name` | `.` | Dataset folder name |
+| `--object` | `001` | Object category ID |
+| `--frame` | `ee` | Draw the executed EE frame (`ee`) or raw sampler frame (`sampler`) |
 | `--max_grasps` | `24000` | Random subset to display |
 | `--score_min` | `0.0` | Lower quality bound |
 | `--score_max` | `1.0` | Upper quality bound |
 
-**Note:** The viewer draws a **generic wireframe gripper** for display. The HDF5 data itself is Hand-E-valid (width ≤ 5 cm, Hand-E collision at generation time). Isaac execution uses the real Hand-E geometry and `hande_end` frame.
+**Note:** The viewer defaults to `--frame ee`, which draws the execution-equivalent Hand-E command frame. Use `--frame sampler` only when you explicitly want the raw contact sampler frame.
 
 ---
 
-## 3. Execute in Isaac Sim
+## 4. Execute in Isaac Sim
 
 Convert URDF to USD (once per object):
 
 ```bash
 conda activate metagrasp
-python urdf_converter.py --input /home/sustech/桌面/DSQNet/models_ifl/001/textured.urdf
+python urdf_converter.py --input UR_grasp_database/001/textured.urdf
 ```
 
 Run the classical smoke task:
@@ -149,7 +173,7 @@ python run.py --task object-v0-Classical --num_envs 1 --enable_cameras
 
 ### Multi-object runs
 
-`object-v0-Classical` can load a pool of object IDs and randomly select one active object on each episode reset. The active object is spawned at the fixed classical table pose, while inactive objects are moved off the table. Runtime grasp selection uses the active object's ID, so each episode loads grasps from the matching `models_ifl/<id>/textured.obj.hdf5`.
+`object-v0-Classical` can load a pool of object IDs and randomly select one active object on each episode reset. The active object is spawned at the fixed classical table pose, while inactive objects are moved off the table. Runtime grasp selection uses the active object's ID, so each episode loads grasps from the matching `UR_grasp_database/<id>/textured.obj.hdf5`.
 
 The default pool is `CLASSICAL_OBJ_IDS` in [`isaac_env/object_env_classical/element_cfg.py`](../isaac_env/object_env_classical/element_cfg.py). Override it at runtime with `--obj_ids`:
 
@@ -166,13 +190,13 @@ Object IDs are normalized to three digits, so `--obj_ids 1,10,16` resolves to `0
 
 To add a new object ID:
 
-1. Put the object assets under `models_ifl/<id>/`.
+1. Put the object assets under `UR_grasp_database/<id>/` (or seed them from the full IFL corpus with `tools/setup_ur_grasp_database.py`).
 2. Generate `textured.obj.hdf5` if it is missing:
 
 ```bash
 conda activate metagrasp
 python tools/generate_object_grasps.py \
-  --mesh_root /home/sustech/桌面/DSQNet/models_ifl \
+  --mesh_root UR_grasp_database \
   --categories 010 016 \
   --gripper_profile hand_e \
   --gripper_length 5.0 \
@@ -185,8 +209,8 @@ python tools/generate_object_grasps.py \
 
 ```bash
 conda activate metagrasp
-python urdf_converter.py --input /home/sustech/桌面/DSQNet/models_ifl/010/textured.urdf --headless
-python urdf_converter.py --input /home/sustech/桌面/DSQNet/models_ifl/016/textured.urdf --headless
+python urdf_converter.py --input UR_grasp_database/010/textured.urdf --headless
+python urdf_converter.py --input UR_grasp_database/016/textured.urdf --headless
 ```
 
 4. Either pass the object with `--obj_ids` or add it to `CLASSICAL_OBJ_IDS`.
@@ -211,15 +235,17 @@ Steps in [`grasp_sampler/runtime.py`](../grasp_sampler/runtime.py):
 3. Sort by quality; evaluate up to 500 top candidates.
 4. Build a scene collision model (table, ground, object at current pose).
 5. Keep collision-free grasps for the Hand-E proxy.
-6. Rank by **(score, width)**; pick candidate at `rank` (retry index).
+6. Rank by **score plus a soft top-down approach boost**, with width as a tiebreaker; pick candidate at `rank` (retry index).
 7. Convert to a 7D `hande_end` command (position m + quaternion wxyz).
+
+The top-down preference is runtime-only and controlled by `CLASSICAL_PREFER_TOPDOWN`, `CLASSICAL_TOPDOWN_WEIGHT`, and `CLASSICAL_TOPDOWN_AXIS` in [`isaac_env/object_env_classical/element_cfg.py`](../isaac_env/object_env_classical/element_cfg.py). Side grasps are still available as fallback retry candidates.
 
 Then the state machine runs **reach → approach → grasp → lift**.
 
 Example log:
 
 ```
-[Classical Grasp] env=0 episode=0 obj=001 profile=hand_e score=1.000 valid_candidates=500 width_cm=3.81
+[Classical Grasp] env=0 episode=0 obj=001 profile=hand_e score=1.000 align=0.92 valid_candidates=500 width_cm=3.81
 ```
 
 If no collision-free grasp is found, the task falls back to the image-normal demo heuristic.
@@ -228,7 +254,7 @@ If no collision-free grasp is found, the task falls back to the image-normal dem
 
 ## HDF5 storage format
 
-File: `models_ifl/<id>/textured.obj.hdf5`
+File: `UR_grasp_database/<id>/textured.obj.hdf5`
 
 ```
 grasps/

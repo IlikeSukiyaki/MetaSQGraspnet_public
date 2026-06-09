@@ -65,13 +65,13 @@ alias isaaclab=/home/{user_name}/IsaacLab/isaaclab.sh
 
 ## MetaGraspNet objects [available](https://github.com/maximiliangilles/MetaGraspNet/tree/master?tab=readme-ov-file)
 
-Objects are now adapted from [models](https://nx25922.your-storageshare.de/s/9KrFffzwoTmtapR). Unzip under the same directory and run `isaaclab -p urdf_converter.py` to convert all URDF files into USD files (!!! Please use isaaclab 1.4 version for urdf conversion since this is now out-of-date for isaaclab 2.0!). We don't use original USD files since all the collision meshes are in convex hall, which are unrealistic.
+Objects are now adapted from [models](https://nx25922.your-storageshare.de/s/9KrFffzwoTmtapR). Keep the full corpus at `/home/sustech/桌面/DSQNet/models_ifl` and seed the curated UR10e + Hand-E test set into `UR_grasp_database/<id>/` with `tools/setup_ur_grasp_database.py`. Run `isaaclab -p urdf_converter.py` to convert URDF files into USD files (!!! Please use isaaclab 1.4 version for urdf conversion since this is now out-of-date for isaaclab 2.0!). We don't use original USD files since all the collision meshes are in convex hull, which are unrealistic.
 
 ## SQNet dual-camera data task
 
 `SQ-v0-Data` collects synthetic SQNet scene observations with the AIR setup's UR10e + Hand-E manipulator, object `models_ifl/001`, a fixed on-hand camera, and a second top-down camera above the table. Each stable randomized scene can be saved as raw depth/segmentation/point-cloud data and converted to `rgbsq_grasp` `.npy` samples.
 
-Before the first run, convert the object URDF to a physics-ready USD if `models/models_ifl/001/orbit_obj.usd` is missing:
+Before the first run, convert the object URDF to a physics-ready USD if `/home/sustech/桌面/DSQNet/models_ifl/001/orbit_obj.usd` is missing:
 
 ```bash
 cd /home/sustech/桌面/DSQNet/metagrasp/MetaIsaacGrasp

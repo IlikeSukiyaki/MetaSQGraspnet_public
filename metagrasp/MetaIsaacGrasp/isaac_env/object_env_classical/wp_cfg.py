@@ -5,6 +5,47 @@ from isaac_env.air_env_base.wp_cfg import *
 from .element_cfg import *
 
 
+@wp.func
+def _classical_retreat_vector(rotation: wp.quat):
+    return wp.quat_rotate(
+        rotation,
+        wp.vec3(
+            CLASSICAL_APPROACH_AXIS_EE_X * APPROACH_DISTANCE,
+            CLASSICAL_APPROACH_AXIS_EE_Y * APPROACH_DISTANCE,
+            CLASSICAL_APPROACH_AXIS_EE_Z * APPROACH_DISTANCE,
+        ),
+    )
+
+
+@wp.func
+def approach_pose_from_classical_grasp_pose(grasp_pose: wp.transform):
+    """Compute the pre-grasp pose by backing away along the configured EE axis."""
+    retreat = _classical_retreat_vector(wp.transform_get_rotation(grasp_pose))
+    return wp.transform(
+        wp.transform_get_translation(grasp_pose) - retreat,
+        wp.transform_get_rotation(grasp_pose),
+    )
+
+
+@wp.func
+def interpolated_classical_approach_pose(grasp_pose: wp.transform, elapsed_time: float):
+    """Move from pre-grasp to grasp at a controlled pace."""
+    grasp_pos = wp.transform_get_translation(grasp_pose)
+    grasp_rot = wp.transform_get_rotation(grasp_pose)
+    retreat = _classical_retreat_vector(grasp_rot)
+
+    approach_alpha = float(0.0)
+    if elapsed_time > CLASSICAL_PREGRASP_HOLD_TIME:
+        approach_alpha = (elapsed_time - CLASSICAL_PREGRASP_HOLD_TIME) / CLASSICAL_APPROACH_DURATION
+        if approach_alpha > 1.0:
+            approach_alpha = 1.0
+
+    return wp.transform(
+        grasp_pos - retreat * (1.0 - approach_alpha),
+        grasp_rot,
+    )
+
+
 @wp.kernel
 def infer_state_machine_disc(
     dt: wp.array(dtype=float),
@@ -65,7 +106,7 @@ def infer_state_machine_disc(
         sm_wait_time[tid] = 0.0
 
     elif state == PickSmState.reach:
-        des_ee_pose[tid] = approach_pose_from_grasp_pose(grasp_pose[tid])
+        des_ee_pose[tid] = approach_pose_from_classical_grasp_pose(grasp_pose[tid])
         des_gripper_state[tid] = GripperState.OPEN
         if dist_transforms(ee_pose[tid], des_ee_pose[tid]) < DISTANCE_LIMIT and ee_vel[tid] < EE_VEL_LIMIT:
             sm_state[tid] = PickSmState.approach
@@ -73,12 +114,13 @@ def infer_state_machine_disc(
             sm_state[tid] = PickSmState.init
 
     elif state == PickSmState.approach:
-        des_ee_pose[tid] = grasp_pose[tid]
+        des_ee_pose[tid] = interpolated_classical_approach_pose(grasp_pose[tid], sm_wait_time[tid])
         des_gripper_state[tid] = GripperState.OPEN
         if (
-            dist_transforms(ee_pose[tid], des_ee_pose[tid]) < DISTANCE_LIMIT
+            sm_wait_time[tid] >= CLASSICAL_PREGRASP_HOLD_TIME + CLASSICAL_APPROACH_DURATION
+            and dist_transforms(ee_pose[tid], grasp_pose[tid]) < DISTANCE_LIMIT
             and ee_vel[tid] < EE_VEL_LIMIT
-            or sm_wait_time[tid] >= PickSmLimitTime.approach
+            or sm_wait_time[tid] >= CLASSICAL_APPROACH_TIMEOUT
         ):
             sm_state[tid] = PickSmState.grasp
             sm_wait_time[tid] = 0.0

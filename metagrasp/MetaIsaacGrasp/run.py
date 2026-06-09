@@ -20,7 +20,7 @@ parser.add_argument(
     "--saved_video_views",
     type=str,
     default="front,left,right,back",
-    help="Comma-separated viewer presets for object-v0-Classical success videos. "
+    help="Comma-separated viewer presets for classical success videos. "
     "Choices: front, left, right, back.",
 )
 parser.add_argument("--max_iterations", type=int, default=None, help="RL Policy training iterations.")
@@ -49,8 +49,7 @@ parser.add_argument(
     "--obj_ids",
     type=str,
     default=None,
-    help="Comma-separated object IDs for object-v0-Classical (e.g. 001,010,016). "
-    "Overrides CLASSICAL_OBJ_IDS in isaac_env/object_env_classical/element_cfg.py.",
+    help="Comma-separated object IDs for classical tasks (e.g. 001,010,016).",
 )
 parser.add_argument("--task", type=str, default="AIR-v0-Grasp", choices=["AIR-v0-Grasp", 
                                                                          "AIR-v0-SB3", 
@@ -58,6 +57,7 @@ parser.add_argument("--task", type=str, default="AIR-v0-Grasp", choices=["AIR-v0
                                                                          "AIR-v0-Tele",
                                                                          "AIR-v0-SKRL",
                                                                          "object-v0-Classical",
+                                                                         "object-v1-Classical-2f85",
                                                                          "SQ-v0-Data"
                                                                          ], help="Task name.")
 parser.add_argument("--distributed", action="store_true", help="Run training with multiple GPUs or nodes.")
@@ -89,6 +89,8 @@ import time
 
 if args_cli.task.startswith("SQ-"):
     from isaac_env.sqnet_env_data import SQPickSmData as AIRSim
+elif args_cli.task == "object-v1-Classical-2f85":
+    from isaac_env.object_env_classical_2f85 import ObjectPickSmClassical2F85 as AIRSim
 elif args_cli.task.startswith("object-"):
     from isaac_env.object_env_classical import ObjectPickSmClassical as AIRSim
 else:

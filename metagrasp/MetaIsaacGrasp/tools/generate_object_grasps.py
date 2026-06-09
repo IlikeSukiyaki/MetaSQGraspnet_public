@@ -24,23 +24,31 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from grasp_sampler import generate_grasp_object as sampler
-from grasp_sampler.gripper_profiles import get_profile
+from grasp_sampler.database_paths import legacy_models_ifl_roots, resolve_grasp_database_root
+from grasp_sampler.gripper_profile_defaults import HAND_E_WIDTH_MAX_CM
+from grasp_sampler.gripper_profiles import ParallelJawProfile, get_profile
 
 
 def _default_mesh_root() -> pathlib.Path:
-    local_models = REPO_ROOT / "models" / "models_ifl"
-    if local_models.exists():
-        return local_models
+    database_root = resolve_grasp_database_root()
+    if database_root.exists():
+        return database_root
 
-    workspace_models = REPO_ROOT.parents[1] / "models_ifl"
-    if workspace_models.exists():
-        return workspace_models
+    for legacy_root in legacy_models_ifl_roots():
+        if legacy_root.exists():
+            return legacy_root
 
-    return local_models
+    return database_root
 
 
-def _build_config(args: argparse.Namespace) -> dict:
-    profile = get_profile(args.gripper_profile)
+def _resolve_profile(args: argparse.Namespace) -> ParallelJawProfile:
+    return get_profile(
+        args.gripper_profile,
+        width_max_cm=args.width_max_cm,
+    )
+
+
+def _build_config(args: argparse.Namespace, profile: ParallelJawProfile) -> dict:
     return {
         "max_angle_sampling": np.pi / 16,
         "max_angle_friction": np.pi / 8,
@@ -56,8 +64,7 @@ def _build_config(args: argparse.Namespace) -> dict:
     }
 
 
-def _install_gripper_profile(profile_name: str) -> None:
-    profile = get_profile(profile_name)
+def _install_gripper_profile(profile: ParallelJawProfile) -> None:
     sampler.set_gripper_profile(profile)
     sampler.GRIPPER_WIDTH_MAX = profile.width_max_cm
     sampler.PREGRASP_PARALLEL_DISTANCE = profile.pregrasp_extra_cm
@@ -81,7 +88,7 @@ def _generate_one(obj_path: str, mesh_root: pathlib.Path, args: argparse.Namespa
     obj_mesh, _ = sampler.load_mesh(mesh_root, relative_obj_path, scale_factor=100)
     obj_mesh.fill_holes()
 
-    hdf5_file = sampler.create_file(mesh_root, relative_obj_path)
+    hdf5_file = sampler.create_file(mesh_root, relative_obj_path, hdf5_suffix=args.hdf5_suffix)
     try:
         if args.com:
             contact_points, index_tri = sampler.sample_surface_points_com(
@@ -103,7 +110,8 @@ def _generate_one(obj_path: str, mesh_root: pathlib.Path, args: argparse.Namespa
             mesh_name=relative_obj_path,
             **config,
         )
-        print(f"[Info] Wrote {counter} grasps for {relative_obj_path}")
+        output_name = relative_obj_path.with_name(relative_obj_path.name + args.hdf5_suffix + ".hdf5")
+        print(f"[Info] Wrote {counter} grasps to {output_name}")
     finally:
         hdf5_file.close()
 
@@ -118,8 +126,28 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max_grasps", type=int, default=2000)
     parser.add_argument("--samples_per_point", type=int, default=10)
     parser.add_argument("--collision_samples", type=int, default=360 // 24)
-    parser.add_argument("--gripper_profile", type=str, default="hand_e", choices=["hand_e", "franka"])
-    parser.add_argument("--gripper_length", type=float, default=None)
+    parser.add_argument("--gripper_profile", type=str, default="hand_e", choices=["hand_e", "franka", "2f85"])
+    parser.add_argument(
+        "--width_max_cm",
+        type=float,
+        default=None,
+        help=(
+            "Override profile max jaw width (cm). Defaults to the profile constant "
+            f"(Hand-E: HAND_E_WIDTH_MAX_CM={HAND_E_WIDTH_MAX_CM})."
+        ),
+    )
+    parser.add_argument(
+        "--gripper_length",
+        type=float,
+        default=None,
+        help="Antipodal width cutoff (cm). Defaults to the resolved profile width_max_cm.",
+    )
+    parser.add_argument(
+        "--hdf5_suffix",
+        type=str,
+        default=None,
+        help="Output HDF5 suffix before .hdf5 (default: profile hdf5_suffix, e.g. .hand_e).",
+    )
     parser.add_argument("--pool_size", type=int, default=1)
     parser.add_argument("--com", action="store_true")
     parser.add_argument("--paralleljaw", action="store_true", default=True)
@@ -132,12 +160,20 @@ def main() -> int:
     if not mesh_root.exists():
         raise FileNotFoundError(f"Mesh root does not exist: {mesh_root}")
 
-    profile = get_profile(args.gripper_profile)
+    profile = _resolve_profile(args)
     if args.gripper_length is None:
         args.gripper_length = profile.width_max_cm
-    _install_gripper_profile(args.gripper_profile)
-    config = _build_config(args)
+    if args.hdf5_suffix is None:
+        args.hdf5_suffix = profile.hdf5_suffix
+    _install_gripper_profile(profile)
+    config = _build_config(args, profile)
     obj_paths = _resolve_mesh_paths(mesh_root, args.categories)
+    print(
+        "[Info] Gripper profile "
+        f"{profile.name}: width_max_cm={profile.width_max_cm}, "
+        f"gripper_length={args.gripper_length}, "
+        f"hdf5_suffix={args.hdf5_suffix!r}"
+    )
     print(f"[Info] Found object meshes: {obj_paths}")
 
     if args.pool_size == 1:
