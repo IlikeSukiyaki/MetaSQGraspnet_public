@@ -39,33 +39,49 @@ python tools/extract_partial_pc.py \
   --camera both --mask auto --color instance
 
 
-# Classical antipodal grasp smoke task
+# Classical antipodal grasp smoke task (object-v0-Classical)
 # Full workflow: docs/ur_grasp_database_workflow.md
 # CLI details: docs/classical_grasp_sampling.md
+# Gripper width / HDF5 suffix: grasp_sampler/gripper_profile_defaults.py
+
+conda activate metagrasp
 python tools/setup_ur_grasp_database.py \
   --source /home/sustech/桌面/DSQNet/models_ifl \
-  --objects 001,004,010,016 \
+  --objects 000,001,004,011 \
   --overwrite
 
 python tools/generate_object_grasps.py \
   --mesh_root UR_grasp_database \
-  --categories 001 004 010 016 \
+  --categories 000 001 004 011 \
   --gripper_profile hand_e \
-  --gripper_length 5.0 \
   --num_points 500 \
   --max_grasps 2000 \
   --pool_size 1
 
-python urdf_converter.py --input UR_grasp_database/001/textured.urdf
-python urdf_converter.py --input UR_grasp_database/004/textured.urdf
-python urdf_converter.py --input UR_grasp_database/010/textured.urdf
-python urdf_converter.py --input UR_grasp_database/016/textured.urdf
+conda activate env_isaaclab
+python urdf_converter.py --input UR_grasp_database/000/textured.urdf --headless
+python urdf_converter.py --input UR_grasp_database/001/textured.urdf --headless
+python urdf_converter.py --input UR_grasp_database/004/textured.urdf --headless
+python urdf_converter.py --input UR_grasp_database/011/textured.urdf --headless
 
-python run.py --task object-v0-Classical --num_envs 1 --enable_cameras
+python grasp_sampler/visualize_grasp_object.py \
+  --root UR_grasp_database \
+  --object 011 \
+  --gripper_profile hand_e \
+  --frame ee \
+  --max_grasps 50 \
+  --score_min 0.3
 
-python run.py --task object-v0-Classical --obj_ids 001,004,010,016 --num_envs 1 --headless --enable_cameras --saved_video --max_successful_grasps 5
+python run.py --task object-v0-Classical \
+  --obj_ids 011 \
+  --num_envs 1 --headless --enable_cameras \
+  --saved_video --max_successful_grasps 1
 
+python run.py --task object-v0-Classical \
+  --obj_ids 000,001,004,011 \
+  --num_envs 1 --headless --enable_cameras \
+  --saved_video --max_successful_grasps 4
 
 python run.py --task object-v0-Classical --num_envs 1 \
   --headless --enable_cameras --saved_video \
-  --saved_video_views front,left,right
+  --saved_video_views front,left,right,back

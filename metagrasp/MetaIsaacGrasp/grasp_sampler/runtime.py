@@ -20,6 +20,7 @@ import trimesh
 
 from grasp_sampler.database_paths import legacy_models_ifl_roots, resolve_grasp_database_root
 from grasp_sampler.gripper_profiles import ParallelJawProfile, get_profile
+from grasp_sampler.sq_mesh import sample_antipodal_grasps_on_mesh, superquadric_trimesh_cm
 
 
 @dataclass(frozen=True)
@@ -395,6 +396,97 @@ def select_best_grasp(
 
     ranked = sorted(pool, key=_rank_key, reverse=True)
 
+    deduped = []
+    seen_pose_keys = set()
+    for item in ranked:
+        _, gripper_pose_cm, _, _, _ = item
+        pose_key = tuple(np.round(gripper_pose_cm[:3, 3], 2))
+        if pose_key in seen_pose_keys:
+            continue
+        seen_pose_keys.add(pose_key)
+        deduped.append(item)
+
+    if rank >= len(deduped):
+        return None
+
+    raw_score, gripper_pose_cm, contact_pose_cm, width_cm, grasp_config = deduped[rank]
+    score_max = max(item[0] for item in selections) + 1e-12
+    alignment = topdown_alignment(gripper_pose_cm, down_axis)
+    return GraspSelection(
+        pose=gripper_profile.gripper_pose_cm_to_ee_pose(gripper_pose_cm, device=device),
+        score=float(raw_score / score_max),
+        candidate_count=len(deduped),
+        contact_pose_cm=contact_pose_cm,
+        gripper_pose_cm=gripper_pose_cm,
+        width_cm=width_cm,
+        approach_alignment=alignment,
+        grasp_config=grasp_config,
+    )
+
+
+def select_best_grasp_on_sq_mesh(
+    sq_parameters: dict[str, float],
+    object_pose_cm: np.ndarray,
+    desk_center_m: Iterable[float],
+    collision_root: str | Path | None = None,
+    max_candidates: int = 500,
+    device: torch.device | str = "cpu",
+    profile: str | ParallelJawProfile | None = None,
+    robot_root_pos_m: Iterable[float] | None = None,
+    rank: int = 0,
+    min_width_cm: float = 0.0,
+    prefer_topdown: bool = True,
+    topdown_weight: float = 0.5,
+    min_topdown_alignment: float = 0.0,
+    down_axis: Iterable[float] = (0.0, 0.0, -1.0),
+    mesh_resolution: int = 12,
+    num_surface_points: int = 120,
+    max_grasps: int = 250,
+) -> GraspSelection | None:
+    """Sample and rank Hand-E grasps directly on an estimated superquadric."""
+    gripper_profile = get_profile(profile, mesh_root=collision_root)
+    mesh = superquadric_trimesh_cm(sq_parameters, resolution=mesh_resolution)
+    grasp_dict = sample_antipodal_grasps_on_mesh(
+        mesh,
+        profile=gripper_profile,
+        collision_root=collision_root,
+        num_surface_points=num_surface_points,
+        max_grasps=max_grasps,
+    )
+    selections = filter_grasps_for_pose(
+        mesh,
+        grasp_dict,
+        object_pose_cm,
+        desk_center_m,
+        collision_root=collision_root,
+        max_candidates=max_candidates,
+        profile=gripper_profile,
+        robot_root_pos_m=robot_root_pos_m,
+    )
+    if not selections:
+        return None
+
+    pool = [item for item in selections if item[3] >= min_width_cm]
+    if not pool:
+        pool = list(selections)
+
+    if prefer_topdown and min_topdown_alignment > 0.0:
+        topdown_pool = [
+            item for item in pool
+            if topdown_alignment(item[1], down_axis) >= min_topdown_alignment
+        ]
+        if topdown_pool:
+            pool = topdown_pool
+
+    def _rank_key(item: tuple[float, np.ndarray, np.ndarray, float, np.ndarray]) -> tuple[float, float]:
+        raw_score, gripper_pose_cm, _, width, _ = item
+        alignment = topdown_alignment(gripper_pose_cm, down_axis)
+        combined_score = raw_score
+        if prefer_topdown:
+            combined_score += topdown_weight * alignment
+        return combined_score, width
+
+    ranked = sorted(pool, key=_rank_key, reverse=True)
     deduped = []
     seen_pose_keys = set()
     for item in ranked:

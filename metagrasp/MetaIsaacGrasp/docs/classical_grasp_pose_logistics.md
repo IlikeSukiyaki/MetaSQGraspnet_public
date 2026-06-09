@@ -17,22 +17,22 @@ cd metagrasp/MetaIsaacGrasp
 
 python tools/generate_object_grasps.py \
   --mesh_root UR_grasp_database \
-  --categories 001 004 010 016 \
+  --categories 000 001 004 011 \
   --gripper_profile hand_e \
-  --gripper_length 5.0 \
   --num_points 500 \
   --max_grasps 2000 \
   --pool_size 1
 
+conda activate env_isaaclab
 python urdf_converter.py \
-  --input UR_grasp_database/001/textured.urdf \
+  --input UR_grasp_database/011/textured.urdf \
   --headless
 
-# 2. Configure object ID in isaac_env/object_env_classical/element_cfg.py
-#    CLASSICAL_OBJ_IDS = ["001"]
-
-# 3. Run in Isaac Sim
-python run.py --task object-v0-Classical --num_envs 1 --enable_cameras
+# 2. Run in Isaac Sim (--obj_ids overrides CLASSICAL_OBJ_IDS)
+python run.py --task object-v0-Classical \
+  --obj_ids 011 \
+  --num_envs 1 --headless --enable_cameras --saved_video \
+  --max_successful_grasps 1
 ```
 
 ---
@@ -43,7 +43,7 @@ python run.py --task object-v0-Classical --num_envs 1 --enable_cameras
 flowchart TB
   subgraph offline [Offline — object-local, cm]
     OBJ[textured.obj] --> GEN[generate_object_grasps.py]
-    GEN --> HDF5[textured.obj.hdf5]
+    GEN --> HDF5[textured.obj.hand_e.hdf5]
     URDF[textured.urdf] --> USD[orbit_obj.usd]
   end
 
@@ -104,7 +104,7 @@ Do **not** subtract `robot_root_pos` again when building the collision scene.
 
 ## Grasp data format (HDF5)
 
-File: `UR_grasp_database/<id>/textured.obj.hdf5`
+File: `UR_grasp_database/<id>/textured.obj.hand_e.hdf5`
 
 ```
 grasps/paralleljaw/pregrasp_transform   # (N, 10) float32
@@ -156,7 +156,7 @@ gripper_pose_cm = object_pose_cm @ convert_to_gripper_6d(vec_a, vec_b, contact_p
 
 | State | EE target |
 |-------|-----------|
-| `reach` | Pre-grasp: retreat `APPROACH_DISTANCE` along Hand-E EE local +Z |
+| `reach` | Pre-grasp: retreat `APPROACH_DISTANCE` along `CLASSICAL_APPROACH_AXIS_EE` (default EE +Y) |
 | `approach` | Full `grasp_pose` |
 | `grasp` | Hold pose, close gripper |
 | `lift` | `grasp_pose` + `LIFT_HEIGHT` in world Z |
@@ -170,7 +170,7 @@ gripper_pose_cm = object_pose_cm @ convert_to_gripper_6d(vec_a, vec_b, contact_p
 | File | Purpose |
 |------|---------|
 | `textured.obj` | Mesh for antipodal sampling |
-| `textured.obj.hdf5` | Grasp database (generate) |
+| `textured.obj.hand_e.hdf5` | Hand-E grasp database (generate; suffix from `gripper_profile_defaults.py`) |
 | `textured.urdf` | URDF source |
 | `orbit_obj.usd` | Isaac rigid body (convert once) |
 
@@ -178,14 +178,13 @@ Paths resolve from `UR_grasp_database/` under the repo first, then fall back to 
 
 ### Generate grasps
 
-**Always use `--gripper_profile hand_e`** for the UR10e + Hand-E setup. Legacy HDF5 files generated for Franka (8 cm jaw) will include grasps that are too wide or poorly filtered for Hand-E (5 cm max).
+**Always use `--gripper_profile hand_e`** for the UR10e + Hand-E setup. Max jaw width defaults to **7.0 cm** from `grasp_sampler/gripper_profile_defaults.py` (`HAND_E_WIDTH_MAX_CM`). Legacy Franka HDF5 or plain `textured.obj.hdf5` files are not loaded by `object-v0-Classical`.
 
 ```bash
 python tools/generate_object_grasps.py \
   --mesh_root UR_grasp_database \
   --categories <OBJ_ID> \
   --gripper_profile hand_e \
-  --gripper_length 5.0 \
   --num_points 500 \
   --max_grasps 2000 \
   --pool_size 1
@@ -206,8 +205,9 @@ Produces `orbit_obj.usd` next to the URDF.
 ```bash
 python grasp_sampler/visualize_grasp_object.py \
   --root UR_grasp_database \
-  --dataset_name . \
   --object <OBJ_ID> \
+  --gripper_profile hand_e \
+  --frame ee \
   --max_grasps 50
 ```
 
@@ -231,7 +231,7 @@ select_best_grasp(
 ### Selection pipeline ([`runtime.py`](../grasp_sampler/runtime.py))
 
 1. Load mesh + HDF5 for the object.
-2. Filter: `width > 0`, `width ≤ 5 cm`, `score > 0`.
+2. Filter: `width > 0`, `width ≤ HAND_E_WIDTH_MAX_CM` (7 cm), `score > 0`.
 3. Sort by raw HDF5 quality score; evaluate top `CLASSICAL_MAX_GRASP_CANDIDATES` (default 500).
 4. **Collision check** each candidate against:
    - Ground plane
@@ -384,7 +384,7 @@ Stop limits:
 | Robot reaches far from object | Grasp command frame ≠ EE frame; or world coords used as robot-base | Verify `_get_obj_pose` uses link frame + `subtract_frame_transforms` |
 | Gripper grasps through table / from below | Table collision frame wrong | `desk_center` is robot-base; do not subtract robot root again in collision scene |
 | `[Classical Grasp]` never prints | State machine not reaching `choose_object` yet | Wait for `start` → stable object → first loop iteration |
-| `valid_candidates=0` | Old Franka HDF5 or object too wide for Hand-E | Regenerate with `--gripper_profile hand_e` |
+| `valid_candidates=0` | Missing `textured.obj.hand_e.hdf5` or object too wide | Regenerate with `--gripper_profile hand_e`; check `HAND_E_WIDTH_MAX_CM` |
 | Touch but no lift (cylinder) | Pinch grasps (width ≈ 0.1 cm) ranked highest | Increase `CLASSICAL_MIN_GRASP_WIDTH_CM` (e.g. 1.0–1.5) |
 | Same grasp on every retry | Was caused by per-episode cache (removed) | Update to latest code; check `attempt=` increments in logs |
 | Wrong grasp after object moved | Object reset to initial pose on failure (removed) | Update to latest code; retries use live pose |
@@ -396,10 +396,13 @@ Stop limits:
 
 | File | Role |
 |------|------|
+| `grasp_sampler/gripper_profile_defaults.py` | Hand-E width (7 cm) and HDF5 suffix |
 | `tools/generate_object_grasps.py` | Offline HDF5 generation CLI |
 | `grasp_sampler/generate_grasp_object.py` | Antipodal sampler core |
 | `grasp_sampler/gripper_profiles.py` | Hand-E geometry, contact → EE conversion |
 | `grasp_sampler/runtime.py` | Load HDF5, scene collision filter, ranked selection |
+| `isaac_env/classical_shared/` | Shared env cfg factory, sim base, scene config |
+| `isaac_env/gripper_task_configs/hand_e.py` | Hand-E task constants |
 | `isaac_env/object_env_classical/env.py` | Runtime grasp selection hook |
 | `isaac_env/object_env_classical/env_cfg.py` | Fixed object reset, scene/events |
 | `isaac_env/object_env_classical/element_cfg.py` | Object ID, spawn pose, tuning constants |

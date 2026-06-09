@@ -60,12 +60,14 @@ class AIRPickSm:
         video_view_presets = None
         if (
             saved_video
-            and args_cli.task.startswith("object-")
+            and (args_cli.task.startswith("object-") or args_cli.task.startswith("supersq"))
             and getattr(args_cli, "saved_video_views", None)
         ):
             try:
                 if args_cli.task == "object-v1-Classical-2f85":
                     from isaac_env.object_env_classical_2f85.env_cfg import CLASSICAL_VIDEO_VIEW_PRESETS
+                elif args_cli.task.startswith("supersq"):
+                    from isaac_env.supersq_grasp_env.env_cfg import CLASSICAL_VIDEO_VIEW_PRESETS
                 else:
                     from isaac_env.object_env_classical.env_cfg import CLASSICAL_VIDEO_VIEW_PRESETS
             except ImportError:
