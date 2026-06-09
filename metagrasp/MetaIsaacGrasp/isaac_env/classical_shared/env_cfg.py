@@ -22,15 +22,11 @@ from isaaclab.sensors.frame_transformer.frame_transformer_cfg import FrameTransf
 from isaaclab.utils import configclass
 
 from isaac_env.air_env_base.env_cfg import (
-    depth_capture,
     get_camera_pose,
     grasp_success_compute,
     gripper_pose_capture,
-    inst_capture,
-    normal_capture,
     reset_robot_to_default,
     reset_root_state_sphere,
-    rgb_capture,
 )
 
 
@@ -78,6 +74,34 @@ def build_classical_env_cfg(element_cfg):
 
         asset.write_object_pose_to_sim(torch.cat([positions, orientations], dim=-1), env_ids=env_ids)
         asset.write_object_velocity_to_sim(velocities, env_ids=env_ids)
+
+    def classical_rgb_capture(env):
+        data = [
+            env.scene[f"camera_{cam_id}"].data.output["rgb"][..., :3].float()
+            for cam_id in range(element_cfg.N_MULTIPLE_CAM)
+        ]
+        return torch.stack(data, 0).transpose(0, 1)
+
+    def classical_normal_capture(env):
+        data = [
+            env.scene[f"camera_{cam_id}"].data.output["normals"][..., :3]
+            for cam_id in range(element_cfg.N_MULTIPLE_CAM)
+        ]
+        return torch.stack(data, 0).transpose(0, 1)
+
+    def classical_inst_capture(env):
+        data = [
+            env.scene[f"camera_{cam_id}"].data.output["instance_segmentation_fast"].unsqueeze(-1)
+            for cam_id in range(element_cfg.N_MULTIPLE_CAM)
+        ]
+        return torch.stack(data, 0).transpose(0, 1)
+
+    def classical_depth_capture(env):
+        data = [
+            env.scene[f"camera_{cam_id}"].data.output["distance_to_image_plane"].unsqueeze(-1)
+            for cam_id in range(element_cfg.N_MULTIPLE_CAM)
+        ]
+        return torch.clip(torch.stack(data, 0).transpose(0, 1), 0.0, element_cfg.DEPTH_MAX)
 
     def classical_pcd_capture(env):
         pcds = []
@@ -158,6 +182,8 @@ def build_classical_env_cfg(element_cfg):
                     prim_path="{ENV_REGEX_NS}"
                     + f"/{element_cfg.ROBOT_NAME}/{element_cfg.CAMERA_NAME}camera_0"
                 )
+                if getattr(element_cfg, "SUPERSQ_ENABLE_TOPDOWN_CAMERA", False):
+                    self.camera_1 = element_cfg.make_topdown_camera_cfg()
                 if element_cfg.n_random_cam:
                     for i in range(element_cfg.n_random_cam):
                         setattr(
@@ -227,13 +253,13 @@ def build_classical_env_cfg(element_cfg):
             def __init__(self):
                 super().__init__()
                 if "rgb" in element_cfg.MODALITIES:
-                    self.rgb = ObsTerm(func=rgb_capture)
+                    self.rgb = ObsTerm(func=classical_rgb_capture)
                 if "normals" in element_cfg.MODALITIES:
-                    self.normals = ObsTerm(func=normal_capture)
+                    self.normals = ObsTerm(func=classical_normal_capture)
                 if "instance_segmentation_fast" in element_cfg.MODALITIES:
-                    self.instance_segmentation_fast = ObsTerm(func=inst_capture)
+                    self.instance_segmentation_fast = ObsTerm(func=classical_inst_capture)
                 if "distance_to_image_plane" in element_cfg.MODALITIES:
-                    self.distance_to_image_plane = ObsTerm(func=depth_capture)
+                    self.distance_to_image_plane = ObsTerm(func=classical_depth_capture)
                     self.pcd = ObsTerm(func=classical_pcd_capture)
                 self.gripper_pose = ObsTerm(func=gripper_pose_capture)
                 self.concatenate_terms = False

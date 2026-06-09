@@ -51,6 +51,17 @@ parser.add_argument(
     default=None,
     help="Comma-separated object IDs for classical tasks (e.g. 001,010,016).",
 )
+parser.add_argument("--sq_config", type=str, default=None, help="SQNet config YAML for supersq_grasp-v0.")
+parser.add_argument("--sq_checkpoint", type=str, default=None, help="SQNet checkpoint for supersq_grasp-v0.")
+parser.add_argument(
+    "--sq_camera",
+    type=str,
+    default="topdown",
+    choices=["topdown", "onhand"],
+    help="Camera used for supersq_grasp-v0 partial point cloud extraction.",
+)
+parser.add_argument("--save_sq_debug", action="store_true", default=False, help="Save supersq fit debug artifacts.")
+parser.add_argument("--sq_debug_dir", type=str, default=None, help="Directory for supersq debug artifacts.")
 parser.add_argument("--task", type=str, default="AIR-v0-Grasp", choices=["AIR-v0-Grasp", 
                                                                          "AIR-v0-SB3", 
                                                                          "AIR-v0-Data", 
@@ -58,7 +69,8 @@ parser.add_argument("--task", type=str, default="AIR-v0-Grasp", choices=["AIR-v0
                                                                          "AIR-v0-SKRL",
                                                                          "object-v0-Classical",
                                                                          "object-v1-Classical-2f85",
-                                                                         "SQ-v0-Data"
+                                                                         "SQ-v0-Data",
+                                                                         "supersq_grasp-v0",
                                                                          ], help="Task name.")
 parser.add_argument("--distributed", action="store_true", help="Run training with multiple GPUs or nodes.")
 # append AppLauncher cli args
@@ -89,6 +101,8 @@ import time
 
 if args_cli.task.startswith("SQ-"):
     from isaac_env.sqnet_env_data import SQPickSmData as AIRSim
+elif args_cli.task.startswith("supersq"):
+    from isaac_env.supersq_grasp_env import SuperSQPickSm as AIRSim
 elif args_cli.task == "object-v1-Classical-2f85":
     from isaac_env.object_env_classical_2f85 import ObjectPickSmClassical2F85 as AIRSim
 elif args_cli.task.startswith("object-"):

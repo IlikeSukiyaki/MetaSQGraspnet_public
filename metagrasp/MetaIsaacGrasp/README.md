@@ -67,6 +67,69 @@ alias isaaclab=/home/{user_name}/IsaacLab/isaaclab.sh
 
 Objects are now adapted from [models](https://nx25922.your-storageshare.de/s/9KrFffzwoTmtapR). Keep the full corpus at `/home/sustech/桌面/DSQNet/models_ifl` and seed the curated UR10e + Hand-E test set into `UR_grasp_database/<id>/` with `tools/setup_ur_grasp_database.py`. Run `isaaclab -p urdf_converter.py` to convert URDF files into USD files (!!! Please use isaaclab 1.4 version for urdf conversion since this is now out-of-date for isaaclab 2.0!). We don't use original USD files since all the collision meshes are in convex hull, which are unrealistic.
 
+## Classical antipodal grasp task (`object-v0-Classical`)
+
+UR10e + Robotiq Hand-E pick-and-lift smoke test using offline antipodal grasps from `UR_grasp_database/<id>/textured.obj.hand_e.hdf5`.
+
+| Setting | Value |
+|---------|-------|
+| Task | `object-v0-Classical` |
+| Robot / EE | `ur10e_hand_e` / `hande_end` |
+| Max jaw width | **7.0 cm** — edit `grasp_sampler/gripper_profile_defaults.py` |
+| HDF5 suffix | `.hand_e` |
+| Verified objects | `000`, `001`, `004`, `011` |
+
+**Docs:** [docs/ur_grasp_database_workflow.md](docs/ur_grasp_database_workflow.md) · [docs/classical_grasp_sampling.md](docs/classical_grasp_sampling.md) · [command.txt](command.txt)
+
+Quick start (after seeding assets):
+
+```bash
+cd /home/sustech/桌面/DSQNet/metagrasp/MetaIsaacGrasp
+conda activate metagrasp
+python tools/generate_object_grasps.py \
+  --mesh_root UR_grasp_database --categories 011 --gripper_profile hand_e
+
+conda activate env_isaaclab
+python urdf_converter.py --input UR_grasp_database/011/textured.urdf --headless
+python run.py --task object-v0-Classical --obj_ids 011 \
+  --num_envs 1 --headless --enable_cameras --saved_video --max_successful_grasps 1
+```
+
+Experimental wider-gripper task: `object-v1-Classical-2f85` (Robotiq 2F85, `textured.obj.2f85.hdf5`).
+
+## SQNet superquadric grasp task (`supersq_grasp-v0`)
+
+`supersq_grasp-v0` combines the stable Classical UR10e + Hand-E execution stack with live SQNet perception. It uses UR_grasp_database objects, extracts an object-only top-down partial point cloud in memory, estimates a single SQNet superquadric, samples Hand-E antipodal grasps on the estimated mesh, and executes the normal pick-lift state machine.
+
+**Full workflow:** [docs/supersq_grasp_workflow.md](docs/supersq_grasp_workflow.md)
+
+```bash
+cd /home/sustech/桌面/DSQNet/metagrasp/MetaIsaacGrasp
+conda activate env_isaaclab
+python run.py --task supersq_grasp-v0 --obj_ids 004 --num_envs 1 \
+  --headless --enable_cameras --saved_video --max_successful_grasps 1
+```
+
+For a lightweight smoke test with perception artifacts:
+
+```bash
+python -u run.py --task supersq_grasp-v0 --obj_ids 004 --num_envs 1 \
+  --headless --enable_cameras --max_successful_grasps 1 \
+  --save_sq_debug
+```
+
+Use `--save_sq_debug` to write each attempt under `logs/sq_debug/supersq_grasp-v0/<timestamp>/`. Each attempt folder includes `partial_pc.npy`, `partial_pc.ply`, `sq_mesh_robot.ply`, `grasp_axes.ply`, and `sq_fit.json`, all in the robot-base frame except centimeter-valued grasp matrices recorded in JSON. Visualize one attempt with:
+
+```bash
+python tools/inspect_supersq_debug.py \
+  --dir logs/sq_debug/supersq_grasp-v0/<timestamp>/env0_epi000001_attempt0_obj004
+
+python tools/inspect_supersq_grasps.py \
+  --dir logs/sq_debug/supersq_grasp-v0/<timestamp>/env0_epi000001_attempt0_obj004
+```
+
+The Isaac environment must be able to import `/home/sustech/桌面/DSQNet/rgbsq_grasp`; the task adds that checkout to `sys.path` and uses `rgbsq_grasp/pretrained/sqnet_config/example/model_best.pkl` by default. Make sure the Isaac Python environment has the SQNet-side runtime packages installed, especially `omegaconf`, `scikit-learn`, and `open3d`.
+
 ## SQNet dual-camera data task
 
 `SQ-v0-Data` collects synthetic SQNet scene observations with the AIR setup's UR10e + Hand-E manipulator, object `models_ifl/001`, a fixed on-hand camera, and a second top-down camera above the table. Each stable randomized scene can be saved as raw depth/segmentation/point-cloud data and converted to `rgbsq_grasp` `.npy` samples.

@@ -281,9 +281,10 @@ Edit `isaac_env/object_env_classical/element_cfg.py`:
    python tools/generate_object_grasps.py \
      --mesh_root UR_grasp_database \
      --categories 001 \
-     --gripper_profile hand_e \
-     --gripper_length 5.0
+     --gripper_profile hand_e
    ```
+
+   Width and suffix default from `grasp_sampler/gripper_profile_defaults.py`.
 
 3. **Measure the loaded Isaac EE frame** (Step 5 above) — do not trust URDF labels alone.
 
@@ -301,7 +302,7 @@ Edit `isaac_env/object_env_classical/element_cfg.py`:
 rotation = stack([baseline, approach, cross(baseline, approach)], axis=1)
 ```
 
-Legacy Franka tasks retreat along EE **+Y** in their own `wp_cfg.py`. Do not mix Franka HDF5 (8 cm jaw) with Hand-E runtime (5 cm max).
+Legacy Franka tasks retreat along EE **+Y** in their own `wp_cfg.py`. Do not mix Franka HDF5 (8 cm jaw) with Hand-E runtime (7 cm max from `HAND_E_WIDTH_MAX_CM`).
 
 ---
 
@@ -309,6 +310,7 @@ Legacy Franka tasks retreat along EE **+Y** in their own `wp_cfg.py`. Do not mix
 
 | File | Retargeting role |
 |------|------------------|
+| `grasp_sampler/gripper_profile_defaults.py` | Hand-E / 2F85 width and HDF5 suffix (edit once) |
 | `grasp_sampler/gripper_profiles.py` | Contact → sampler 4×4; sampler → EE 7D; collision geometry |
 | `grasp_sampler/runtime.py` | Object pose compose, collision filter, `select_best_grasp()` |
 | `isaac_env/object_env_classical/env.py` | Runtime hook: selects grasp, logs `approach_robot` |
@@ -331,7 +333,7 @@ Legacy Franka tasks retreat along EE **+Y** in their own `wp_cfg.py`. Do not mix
 | Horizontal grasp selected | Log `approach_robot`, `align=` | Raise `CLASSICAL_MIN_TOPDOWN_ALIGNMENT` |
 | Robot far from object | `verify_classical_grasp_frame.py` spawn pose | Ensure object pose is robot-base frame, not world + robot offset |
 | Offline OK, Isaac wrong | Compare `--frame ee` vs sim | Re-run `measure_hande_end_frame.py` after USD/URDF changes |
-| `valid_candidates=0` | HDF5 profile / width | Regenerate with `--gripper_profile hand_e`, `--gripper_length 5.0` |
+| `valid_candidates=0` | HDF5 profile / width | Regenerate with `--gripper_profile hand_e`; confirm `textured.obj.hand_e.hdf5` exists |
 
 ---
 

@@ -13,8 +13,10 @@ The pipeline targets the current Isaac setup:
 | Robot | UR10e (`ur10e_hand_e`) |
 | Gripper | Robotiq Hand-E |
 | EE frame | `hande_end` |
-| Max jaw span | 5.0 cm |
+| Max jaw span | **7.0 cm** (`HAND_E_WIDTH_MAX_CM` in `grasp_sampler/gripper_profile_defaults.py`) |
+| HDF5 output | `textured.obj.hand_e.hdf5` (`HAND_E_HDF5_SUFFIX`) |
 | Gripper profile | `hand_e` |
+| Task ID | `object-v0-Classical` |
 
 ---
 
@@ -25,7 +27,7 @@ flowchart LR
   subgraph offline [Offline]
     Mesh[textured.obj] --> Gen[tools/generate_object_grasps.py]
     Profile[HandEProfile] --> Gen
-    Gen --> HDF5[textured.obj.hdf5]
+    Gen --> HDF5[textured.obj.hand_e.hdf5]
     HDF5 --> Viz[grasp_sampler/visualize_grasp_object.py]
   end
   subgraph online [Isaac runtime]
@@ -47,8 +49,10 @@ flowchart LR
 - Conda env **`env_isaaclab`** — Isaac Sim execution
 - Curated object assets under `UR_grasp_database/<id>/`:
   - `textured.obj` — mesh used for sampling
-  - `textured.obj.hdf5` — generated grasp database
+  - `textured.obj.hand_e.hdf5` — generated Hand-E grasp database
   - `orbit_obj.usd` — object in simulation (create with `urdf_converter.py`)
+
+Edit gripper width and HDF5 suffix in one place: [`grasp_sampler/gripper_profile_defaults.py`](../grasp_sampler/gripper_profile_defaults.py).
 
 ---
 
@@ -67,8 +71,8 @@ python tools/setup_ur_grasp_database.py \
 ```
 
 This copies mesh/URDF/texture sidecars into `UR_grasp_database/<id>/` and skips
-generated outputs (`textured.obj.hdf5`, `orbit_obj.usd`) so they can be rebuilt
-with the current Hand-E settings.
+generated outputs (`textured.obj.hand_e.hdf5`, `orbit_obj.usd`) so they can be
+rebuilt with the current Hand-E settings.
 
 ---
 
@@ -82,9 +86,8 @@ conda activate metagrasp
 
 python tools/generate_object_grasps.py \
   --mesh_root UR_grasp_database \
-  --categories 001 004 010 016 \
+  --categories 000 001 004 011 \
   --gripper_profile hand_e \
-  --gripper_length 5.0 \
   --num_points 500 \
   --max_grasps 2000 \
   --pool_size 1
@@ -95,7 +98,7 @@ python tools/generate_object_grasps.py \
 1. Sample contact points on the object surface.
 2. Cast rays to find **antipodal** contact pairs.
 3. Check **friction cone** constraints at both contacts.
-4. Reject pairs wider than **5 cm** (Hand-E limit).
+4. Reject pairs wider than the profile max width (default **7 cm** from `gripper_profile_defaults.py`).
 5. Try several approach rotations around the grasp axis.
 6. Run **Hand-E collision checks** against the object mesh.
 7. Write valid grasps to HDF5.
@@ -110,7 +113,8 @@ Gripper geometry: [`grasp_sampler/gripper_profiles.py`](../grasp_sampler/gripper
 | `--mesh_root` | auto-detect | Root folder containing object categories |
 | `--categories` | `001` | Object ID(s) to process |
 | `--gripper_profile` | `hand_e` | `hand_e` or legacy `franka` |
-| `--gripper_length` | profile max width | Max antipodal span in cm |
+| `--gripper_length` | profile max width (7 cm) | Optional override of max antipodal span in cm |
+| `--hdf5_suffix` | profile suffix (`.hand_e`) | Output suffix before `.hdf5` |
 | `--num_points` | `500` | Surface points to sample |
 | `--max_grasps` | `2000` | Max grasps stored per object |
 | `--samples_per_point` | `10` | Random approach tries per contact |
@@ -132,11 +136,11 @@ cd metagrasp/MetaIsaacGrasp
 
 python grasp_sampler/visualize_grasp_object.py \
   --root UR_grasp_database \
-  --dataset_name . \
-  --object 001 \
+  --object 011 \
+  --gripper_profile hand_e \
   --frame ee \
   --max_grasps 50 \
-  --score_min 0.5
+  --score_min 0.3
 ```
 
 ### CLI reference
@@ -157,23 +161,26 @@ python grasp_sampler/visualize_grasp_object.py \
 
 ## 4. Execute in Isaac Sim
 
-Convert URDF to USD (once per object):
+Convert URDF to USD (once per object, requires `env_isaaclab`):
 
 ```bash
-conda activate metagrasp
-python urdf_converter.py --input UR_grasp_database/001/textured.urdf
+conda activate env_isaaclab
+python urdf_converter.py --input UR_grasp_database/011/textured.urdf --headless
 ```
 
 Run the classical smoke task:
 
 ```bash
 conda activate env_isaaclab
-python run.py --task object-v0-Classical --num_envs 1 --enable_cameras
+python run.py --task object-v0-Classical \
+  --obj_ids 011 \
+  --num_envs 1 --headless --enable_cameras \
+  --saved_video --max_successful_grasps 1
 ```
 
 ### Multi-object runs
 
-`object-v0-Classical` can load a pool of object IDs and randomly select one active object on each episode reset. The active object is spawned at the fixed classical table pose, while inactive objects are moved off the table. Runtime grasp selection uses the active object's ID, so each episode loads grasps from the matching `UR_grasp_database/<id>/textured.obj.hdf5`.
+`object-v0-Classical` can load a pool of object IDs and randomly select one active object on each episode reset. The active object is spawned at the fixed classical table pose, while inactive objects are moved off the table. Runtime grasp selection uses the active object's ID, so each episode loads grasps from the matching `UR_grasp_database/<id>/textured.obj.hand_e.hdf5`.
 
 The default pool is `CLASSICAL_OBJ_IDS` in [`isaac_env/object_env_classical/element_cfg.py`](../isaac_env/object_env_classical/element_cfg.py). Override it at runtime with `--obj_ids`:
 
@@ -191,15 +198,14 @@ Object IDs are normalized to three digits, so `--obj_ids 1,10,16` resolves to `0
 To add a new object ID:
 
 1. Put the object assets under `UR_grasp_database/<id>/` (or seed them from the full IFL corpus with `tools/setup_ur_grasp_database.py`).
-2. Generate `textured.obj.hdf5` if it is missing:
+2. Generate `textured.obj.hand_e.hdf5` if it is missing:
 
 ```bash
 conda activate metagrasp
 python tools/generate_object_grasps.py \
   --mesh_root UR_grasp_database \
-  --categories 010 016 \
+  --categories <OBJ_ID> \
   --gripper_profile hand_e \
-  --gripper_length 5.0 \
   --num_points 500 \
   --max_grasps 2000 \
   --pool_size 1
@@ -208,9 +214,8 @@ python tools/generate_object_grasps.py \
 3. Convert the URDF to the simulation USD expected by the task:
 
 ```bash
-conda activate metagrasp
-python urdf_converter.py --input UR_grasp_database/010/textured.urdf --headless
-python urdf_converter.py --input UR_grasp_database/016/textured.urdf --headless
+conda activate env_isaaclab
+python urdf_converter.py --input UR_grasp_database/<OBJ_ID>/textured.urdf --headless
 ```
 
 4. Either pass the object with `--obj_ids` or add it to `CLASSICAL_OBJ_IDS`.
@@ -220,7 +225,7 @@ Each object in the pool must have:
 | File | Purpose |
 |------|---------|
 | `textured.obj` | Mesh used by the antipodal sampler and runtime collision filter |
-| `textured.obj.hdf5` | Generated grasp database |
+| `textured.obj.hand_e.hdf5` | Generated Hand-E grasp database |
 | `textured.urdf` | Source for USD conversion |
 | `orbit_obj.usd` | Isaac simulation asset loaded by `object-v0-Classical` |
 
@@ -231,7 +236,7 @@ When the state machine reaches **`choose_object`**, [`isaac_env/object_env_class
 Steps in [`grasp_sampler/runtime.py`](../grasp_sampler/runtime.py):
 
 1. Load HDF5 grasps for the chosen object.
-2. Keep grasps with width ≤ 5 cm and score > 0.
+2. Keep grasps with width ≤ profile max (7 cm) and score > 0.
 3. Sort by quality; evaluate up to 500 top candidates.
 4. Build a scene collision model (table, ground, object at current pose).
 5. Keep collision-free grasps for the Hand-E proxy.
@@ -254,7 +259,7 @@ If no collision-free grasp is found, the task falls back to the image-normal dem
 
 ## HDF5 storage format
 
-File: `UR_grasp_database/<id>/textured.obj.hdf5`
+File: `UR_grasp_database/<id>/textured.obj.hand_e.hdf5`
 
 ```
 grasps/
@@ -280,12 +285,16 @@ Grasps are **not** stored as robot poses. The final `hande_end` pose is computed
 
 | File | Role |
 |------|------|
-| `grasp_sampler/gripper_profiles.py` | Hand-E / Franka geometry and EE conversion |
+| `grasp_sampler/gripper_profile_defaults.py` | Hand-E width (7 cm) and HDF5 suffix (single edit point) |
+| `grasp_sampler/gripper_profiles.py` | Hand-E / 2F85 / Franka geometry and EE conversion |
+| `isaac_env/classical_shared/` | Shared classical env cfg factory and sim base |
+| `isaac_env/gripper_task_configs/hand_e.py` | Hand-E task constants wired into element_cfg |
 | `tools/generate_object_grasps.py` | Non-interactive generation CLI |
 | `grasp_sampler/generate_grasp_object.py` | Antipodal sampler core |
 | `grasp_sampler/runtime.py` | Online scene filter + EE pose |
 | `grasp_sampler/visualize_grasp_object.py` | Offline Trimesh viewer |
-| `isaac_env/object_env_classical/` | `object-v0-Classical` task |
+| `isaac_env/object_env_classical/` | `object-v0-Classical` task (Hand-E) |
+| `isaac_env/object_env_classical_2f85/` | `object-v1-Classical-2f85` task (experimental) |
 | `docs/classical_grasp_pose_logistics.md` | Frame conventions, selection, retry, troubleshooting |
 | `command.txt` | Copy-paste command snippets |
 
@@ -295,6 +304,7 @@ Grasps are **not** stored as robot poses. The final `hande_end` pose is computed
 
 | Task | Grasp source |
 |------|--------------|
-| `object-v0-Classical` | HDF5 + Hand-E scene filter (this guide) |
+| `object-v0-Classical` | `textured.obj.hand_e.hdf5` + Hand-E scene filter (this guide) |
+| `object-v1-Classical-2f85` | `textured.obj.2f85.hdf5` + Robotiq 2F85 (requires USD asset) |
 | `AIR-v0-Grasp` | Remote vMF-Contact agent or vision demo |
 | `AIR-v0-Data` | Vision demo / optional HDF5 |

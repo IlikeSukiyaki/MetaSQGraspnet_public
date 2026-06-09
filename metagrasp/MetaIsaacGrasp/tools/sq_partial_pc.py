@@ -165,6 +165,32 @@ def _mesh_object_mask(
     return mask, debug
 
 
+def _mesh_object_mask_from_pose(
+    points: np.ndarray,
+    mesh_path: Path,
+    object_pose_robot_m: np.ndarray,
+    margin: float,
+) -> tuple[np.ndarray, dict]:
+    transform = np.asarray(object_pose_robot_m, dtype=np.float64)
+    if transform.shape != (4, 4):
+        raise ValueError(f"object_pose_robot_m must be 4 x 4, got {transform.shape}.")
+
+    rotation = transform[:3, :3]
+    translation = transform[:3, 3]
+    vertices_local = _load_obj_vertices(mesh_path)
+    mins = vertices_local.min(axis=0) - margin
+    maxs = vertices_local.max(axis=0) + margin
+
+    points_local = (points - translation) @ rotation
+    mask = np.all((points_local >= mins) & (points_local <= maxs), axis=1)
+    debug = {
+        "mesh_path": str(mesh_path),
+        "mesh_bounds_local_m": [mins.tolist(), maxs.tolist()],
+        "object_translation_m": translation.tolist(),
+    }
+    return mask, debug
+
+
 def _select_pixel_mask(
     *,
     mask_mode: Literal["auto", "instance", "mesh"],
@@ -205,6 +231,53 @@ def _select_pixel_mask(
     return select_flat, instance_method, {"instance_method": instance_method}
 
 
+def _select_live_pixel_mask(
+    *,
+    mask_mode: Literal["auto", "instance", "mesh"],
+    instance: np.ndarray,
+    id_to_labels: dict[str, str],
+    object_id: str,
+    valid_mask: np.ndarray,
+    pcd_map: np.ndarray,
+    object_pose_robot_m: np.ndarray | None,
+    mesh_path: Path | None,
+    margin: float,
+) -> tuple[np.ndarray, str, dict]:
+    instance_mask, instance_method = _instance_object_mask(instance, id_to_labels, object_id)
+    flat_points = pcd_map[valid_mask].reshape(-1, 3)
+
+    def _mesh_fallback() -> tuple[np.ndarray, str, dict]:
+        if object_pose_robot_m is None or mesh_path is None:
+            raise ValueError(
+                "mesh mask requires object_pose_robot_m and mesh_path for live observations."
+            )
+        select_flat, mesh_debug = _mesh_object_mask_from_pose(
+            flat_points,
+            Path(mesh_path),
+            object_pose_robot_m,
+            margin,
+        )
+        return select_flat, "mesh_bbox", {"instance_method": instance_method, **mesh_debug}
+
+    if mask_mode == "mesh":
+        return _mesh_fallback()
+
+    if mask_mode == "instance":
+        select_flat = instance_mask[valid_mask]
+        if not select_flat.any():
+            raise ValueError(
+                "mask=instance found zero object pixels. "
+                "Try mask_mode='auto' or 'mesh' for this observation."
+            )
+        return select_flat, instance_method, {"instance_method": instance_method}
+
+    if _mask_is_degenerate(instance_mask, valid_mask):
+        return _mesh_fallback()
+
+    select_flat = instance_mask[valid_mask]
+    return select_flat, instance_method, {"instance_method": instance_method}
+
+
 def _attach_point_colors(
     payload: dict,
     *,
@@ -232,6 +305,72 @@ def _attach_point_colors(
     rgb = cv2.cvtColor(cv2.imread(str(rgb_path)), cv2.COLOR_BGR2RGB)
     payload["colors"] = rgb[pixel_mask].reshape(-1, 3).astype(np.uint8)
     payload["color_source"] = "rgb"
+
+
+def extract_partial_pc_from_obs(
+    depth: np.ndarray,
+    instance: np.ndarray,
+    pcd_map: np.ndarray,
+    *,
+    id_to_labels: dict[str, str] | None,
+    object_id: str,
+    object_pose_robot_m: np.ndarray | None = None,
+    mesh_path: Path | str | None = None,
+    margin: float = 0.015,
+    depth_max: float = 2.0,
+    mask_mode: Literal["auto", "instance", "mesh"] = "auto",
+    color_mode: Literal["instance", "none"] = "none",
+) -> dict:
+    """Return an object-only partial point cloud from live camera tensors."""
+    if mask_mode not in MASK_MODES:
+        raise ValueError(f"mask_mode must be one of {MASK_MODES}, got '{mask_mode}'.")
+    if color_mode not in ("instance", "none"):
+        raise ValueError("live extraction supports color_mode='instance' or 'none'.")
+
+    depth = np.squeeze(np.asarray(depth))
+    instance = np.squeeze(np.asarray(instance))
+    pcd_map = np.asarray(pcd_map)
+    if pcd_map.ndim != 3 or pcd_map.shape[-1] != 3:
+        raise ValueError(f"pcd_map must have shape H x W x 3, got {pcd_map.shape}.")
+
+    valid_mask = np.isfinite(depth) & (depth > 0.0) & (depth < depth_max)
+    valid_mask &= np.isfinite(pcd_map).all(axis=-1)
+
+    select_flat, mask_method, mask_debug = _select_live_pixel_mask(
+        mask_mode=mask_mode,
+        instance=instance,
+        id_to_labels=id_to_labels or {},
+        object_id=object_id,
+        valid_mask=valid_mask,
+        pcd_map=pcd_map,
+        object_pose_robot_m=object_pose_robot_m,
+        mesh_path=Path(mesh_path) if mesh_path is not None else None,
+        margin=margin,
+    )
+
+    flat_points = pcd_map[valid_mask].reshape(-1, 3)
+    object_points = flat_points[select_flat].astype(np.float32)
+    pixel_mask = np.zeros(instance.shape, dtype=bool)
+    pixel_mask[valid_mask] = select_flat
+
+    payload: dict = {
+        "partial_pc": object_points,
+        "object_id": object_id,
+        "camera": "live",
+        "frame": "robot_base",
+        "num_points": int(object_points.shape[0]),
+        "mask_mode": mask_mode,
+        "mask_method": mask_method,
+        "mask_debug": mask_debug,
+        "color_mode": color_mode,
+        "instance_mask": pixel_mask,
+    }
+    if color_mode == "instance":
+        instance_color_image = _instance_segmentation_color_image(instance)
+        payload["instance_ids"] = instance[pixel_mask].reshape(-1).astype(np.int32)
+        payload["colors"] = _colors_at_mask(instance_color_image, pixel_mask)
+        payload["color_source"] = "instance_segmentation"
+    return payload
 
 
 def extract_object_partial_pc(
