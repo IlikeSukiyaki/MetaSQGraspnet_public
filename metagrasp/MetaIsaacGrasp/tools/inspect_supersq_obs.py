@@ -5,17 +5,34 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
-import cv2
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from tools.supersq_debug_paths import (  # noqa: E402
+    add_debug_dir_arguments,
+    list_attempt_dirs,
+    resolve_debug_dir_from_args,
+    resolve_run_dir,
+)
+
 import numpy as np
 
 PANEL_SPECS = (
-    ("rgb", "rgb.png", cv2.IMREAD_COLOR),
-    ("depth", "depth.png", cv2.IMREAD_GRAYSCALE),
-    ("instance_segmentation", "instance.png", cv2.IMREAD_COLOR),
-    ("object_mask", "object_mask.png", cv2.IMREAD_GRAYSCALE),
+    ("rgb", "rgb.png", "color"),
+    ("depth", "depth.png", "gray"),
+    ("instance_segmentation", "instance.png", "color"),
+    ("object_mask", "object_mask.png", "gray"),
 )
+
+
+def _cv2():
+    import cv2
+
+    return cv2
 
 
 def _load_meta(debug_dir: Path) -> dict:
@@ -46,6 +63,7 @@ def _depth_max_m(obs_dir: Path) -> float:
 
 
 def _export_pngs_from_arrays(obs_dir: Path, *, depth_max_m: float) -> dict[str, Path]:
+    cv2 = _cv2()
     saved: dict[str, Path] = {}
 
     depth_path = obs_dir / "depth.npy"
@@ -81,12 +99,14 @@ def _export_pngs_from_arrays(obs_dir: Path, *, depth_max_m: float) -> dict[str, 
 
 
 def _to_bgr_panel(image: np.ndarray) -> np.ndarray:
+    cv2 = _cv2()
     if image.ndim == 2:
         return cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
     return image.copy()
 
 
 def _annotate_panel(image: np.ndarray, title: str) -> np.ndarray:
+    cv2 = _cv2()
     panel = _to_bgr_panel(image)
     cv2.rectangle(panel, (0, 0), (panel.shape[1], 28), (0, 0, 0), thickness=-1)
     cv2.putText(
@@ -103,7 +123,7 @@ def _annotate_panel(image: np.ndarray, title: str) -> np.ndarray:
 
 
 def _resize_panel(panel: np.ndarray, width: int, height: int) -> np.ndarray:
-    return cv2.resize(panel, (width, height), interpolation=cv2.INTER_AREA)
+    return _cv2().resize(panel, (width, height), interpolation=_cv2().INTER_AREA)
 
 
 def _save_montage(panels: dict[str, np.ndarray], obs_dir: Path) -> Path:
@@ -135,11 +155,12 @@ def _save_montage(panels: dict[str, np.ndarray], obs_dir: Path) -> Path:
         montage = np.vstack([row1, row2])
 
     out_path = obs_dir / "preview_montage.png"
-    cv2.imwrite(str(out_path), montage)
+    _cv2().imwrite(str(out_path), montage)
     return out_path
 
 
 def _load_panels(obs_dir: Path, *, show_mask: bool) -> dict[str, np.ndarray]:
+    cv2 = _cv2()
     panels: dict[str, np.ndarray] = {}
     for name, filename, mode in PANEL_SPECS:
         if name == "object_mask" and not show_mask:
@@ -147,7 +168,8 @@ def _load_panels(obs_dir: Path, *, show_mask: bool) -> dict[str, np.ndarray]:
         path = obs_dir / filename
         if not path.exists():
             continue
-        image = cv2.imread(str(path), mode)
+        imread_flag = cv2.IMREAD_COLOR if mode == "color" else cv2.IMREAD_GRAYSCALE
+        image = cv2.imread(str(path), imread_flag)
         if image is None:
             continue
         panels[name] = image
@@ -155,6 +177,7 @@ def _load_panels(obs_dir: Path, *, show_mask: bool) -> dict[str, np.ndarray]:
 
 
 def _show_panels(panels: dict[str, np.ndarray], wait_ms: int) -> None:
+    cv2 = _cv2()
     for name, image in panels.items():
         cv2.imshow(name, image)
     if wait_ms == 0:
@@ -225,11 +248,13 @@ def inspect_observation(
         )
         print(f"Mask method: {payload.get('mask_method')}  points: {payload.get('num_points')}")
         if save:
+            cv2 = _cv2()
             mask_path = obs_dir / "object_mask.png"
             cv2.imwrite(str(mask_path), mask)
             saved_paths["object_mask"] = mask_path
             print(f"Saved object_mask: {mask_path}")
         if show:
+            cv2 = _cv2()
             cv2.imshow("object_mask_from_partial_pc", mask)
             if wait_ms == 0:
                 cv2.waitKey(0)
@@ -245,11 +270,11 @@ def inspect_observation(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    add_debug_dir_arguments(parser)
     parser.add_argument(
-        "--dir",
-        type=Path,
-        required=True,
-        help="Path to one env*_epi*_attempt*_obj* debug folder.",
+        "--all-episodes",
+        action="store_true",
+        help="Process every attempt folder in --run (requires --run or --latest).",
     )
     parser.add_argument(
         "--wait-ms",
@@ -273,8 +298,37 @@ def main() -> None:
         help="Save PNG previews without opening OpenCV windows.",
     )
     args = parser.parse_args()
+
+    if args.list_runs or args.list_episodes:
+        resolve_debug_dir_from_args(args)
+
+    if args.all_episodes:
+        if args.dir is not None:
+            raise SystemExit("--all-episodes expects --run or --latest, not --dir.")
+        if args.latest:
+            from tools.supersq_debug_paths import latest_run_dir
+
+            run_dir = latest_run_dir()
+        elif args.run:
+            run_dir = resolve_run_dir(args.run)
+        else:
+            raise SystemExit("--all-episodes requires --run or --latest.")
+        attempt_dirs = list_attempt_dirs(run_dir)
+        if not attempt_dirs:
+            raise SystemExit(f"No attempt folders under {run_dir}")
+        for attempt_dir in attempt_dirs:
+            inspect_observation(
+                attempt_dir,
+                wait_ms=args.wait_ms,
+                show_mask=not args.no_mask,
+                save=not args.no_save,
+                show=not args.no_show,
+            )
+        return
+
+    debug_dir = resolve_debug_dir_from_args(args)
     inspect_observation(
-        args.dir,
+        debug_dir,
         wait_ms=args.wait_ms,
         show_mask=not args.no_mask,
         save=not args.no_save,

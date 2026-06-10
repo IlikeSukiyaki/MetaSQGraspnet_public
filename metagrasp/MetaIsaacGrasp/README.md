@@ -156,7 +156,7 @@ Collect a bounded dataset:
 cd /home/sustech/桌面/DSQNet/metagrasp/MetaIsaacGrasp
 conda activate env_isaaclab
 python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras \
-  --save_camera_data --output_dir datasets/sqnet_isaac \
+  --save_camera_data --output_dir datasets/supersq_grasp_data \
   --max_episodes 100 --topdown_height 1.2
 ```
 
@@ -165,7 +165,7 @@ The top-down camera height is measured in meters above `desk_center`. The camera
 Dataset layout:
 
 ```text
-datasets/sqnet_isaac/
+datasets/supersq_grasp_data/
   manifest.jsonl
   001/
     epi_000001/
@@ -188,14 +188,14 @@ datasets/sqnet_isaac/
 Inspect one saved sample:
 
 ```bash
-python tools/inspect_sq_sample.py --sample datasets/sqnet_isaac/001/epi_000001 --camera camera_topdown --show_pcd
+python tools/inspect_sq_sample.py --sample datasets/supersq_grasp_data/001/epi_000001 --camera camera_topdown --show_pcd
 ```
 
 Convert raw samples to `rgbsq_grasp` point-cloud samples:
 
 ```bash
 python tools/convert_sq_to_npy.py \
-  --input datasets/sqnet_isaac/001 \
+  --input datasets/supersq_grasp_data/001 \
   --output ../../rgbsq_grasp/datasets/isaac_synth/001 \
   --camera both
 ```

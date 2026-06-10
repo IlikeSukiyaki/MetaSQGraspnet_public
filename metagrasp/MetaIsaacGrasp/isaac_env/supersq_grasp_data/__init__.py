@@ -11,7 +11,7 @@ __all__ = ["SQPickSmData", "SQEnvData"]
 
 gym.register(
     id="SQ-v0-Data",
-    entry_point="isaac_env.sqnet_env_data:SQEnvData",
+    entry_point="isaac_env.supersq_grasp_data:SQEnvData",
     kwargs={
         "env_cfg_entry_point": CellEnvCfg,
         "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",

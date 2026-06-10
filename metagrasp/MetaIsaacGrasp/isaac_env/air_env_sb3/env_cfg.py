@@ -75,14 +75,35 @@ def gripper_pose_capture(env):
 def pcd_capture(env):
     pcds = []
     for cam_id in range(N_MULTIPLE_CAM):
-        depths = env.scene[f"camera_{cam_id}"].data.output["distance_to_image_plane"]
-        depths = torch.clip(depths, 0, DEPTH_MAX)
-        pcd_map = [create_pointcloud_from_depth(
-            intrinsic_matrix=env.scene[f"camera_{cam_id}"].data.intrinsic_matrices[env_id],
-            depth=depths[env_id],
-            position=get_camera_pose(env, cam_id, env_id)[:3],
-            orientation=get_camera_pose(env, cam_id, env_id)[3:],
-            device=env.device).view(CAM_WIDTH, CAM_HEIGHT, 3).permute(1,0,2) for env_id in range(env.scene.num_envs)]
+        depths = torch.clip(
+            env.scene[f"camera_{cam_id}"].data.output["distance_to_image_plane"],
+            0,
+            DEPTH_MAX,
+        )
+        pcd_map = []
+        for env_id in range(env.scene.num_envs):
+            pointcloud = create_pointcloud_from_depth(
+                intrinsic_matrix=env.scene[f"camera_{cam_id}"].data.intrinsic_matrices[env_id],
+                depth=depths[env_id],
+                position=get_camera_pose(env, cam_id, env_id)[:3],
+                orientation=get_camera_pose(env, cam_id, env_id)[3:],
+                device=env.device,
+            )
+            expected_size = CAM_WIDTH * CAM_HEIGHT * 3
+            if pointcloud.numel() != expected_size:
+                pcd_map.append(
+                    torch.zeros(
+                        CAM_HEIGHT,
+                        CAM_WIDTH,
+                        3,
+                        device=env.device,
+                        dtype=depths.dtype,
+                    )
+                )
+            else:
+                pcd_map.append(
+                    pointcloud.view(CAM_WIDTH, CAM_HEIGHT, 3).permute(1, 0, 2)
+                )
         pcds.append(torch.stack(pcd_map, 0))
     return torch.stack(pcds, 0).transpose(0, 1)
 

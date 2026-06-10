@@ -123,7 +123,7 @@ def convert_samples(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", type=Path, required=True, help="Raw SQ object directory, e.g. datasets/sqnet_isaac/001.")
+    parser.add_argument("--input", type=Path, required=True, help="Raw SQ object directory, e.g. datasets/supersq_grasp_data/001.")
     parser.add_argument("--output", type=Path, required=True, help="Output directory for rgbsq_grasp .npy samples.")
     parser.add_argument("--camera", choices=CAMERA_CHOICES, default="both", help="Which camera views to export.")
     parser.add_argument("--num_points", type=int, default=3000, help="Number of points in each partial_pc.")

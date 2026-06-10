@@ -16,6 +16,7 @@ except ImportError:  # pragma: no cover - optional for instance colorization
 METAISAAC_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = METAISAAC_ROOT.parent.parent
 MODEL_ROOT_CANDIDATES = (
+    METAISAAC_ROOT / "UR_grasp_database",
     METAISAAC_ROOT / "models" / "models_ifl",
     REPO_ROOT / "models_ifl",
 )
@@ -58,7 +59,8 @@ def _resolve_model_root(model_root: Path | None) -> Path:
         if candidate.exists():
             return candidate
     raise FileNotFoundError(
-        "Could not find models_ifl. Pass --model_root or place meshes under models/models_ifl."
+        "Could not find object mesh root. Pass --model_root or place meshes under "
+        "UR_grasp_database/ or models/models_ifl."
     )
 
 
@@ -93,6 +95,8 @@ def _instance_object_mask(
     instance: np.ndarray,
     id_to_labels: dict[str, str],
     object_id: str,
+    *,
+    strict_target: bool = False,
 ) -> tuple[np.ndarray, str]:
     """Build a pixel mask from instance segmentation labels."""
     id_to_labels = id_to_labels or {}
@@ -103,6 +107,11 @@ def _instance_object_mask(
         mask = np.isin(instance, object_ids)
         if mask.any():
             return mask, "instance_label"
+        if strict_target:
+            return np.zeros(instance.shape, dtype=bool), "instance_empty"
+
+    if strict_target:
+        return np.zeros(instance.shape, dtype=bool), "instance_empty"
 
     multi_object_mask = ~np.isin(instance, list(background_ids)) & (instance > 1)
     if multi_object_mask.any():
@@ -203,10 +212,21 @@ def _select_pixel_mask(
     model_root: Path | None,
     margin: float,
 ) -> tuple[np.ndarray, str, dict]:
-    instance_mask, instance_method = _instance_object_mask(instance, id_to_labels, object_id)
+    multi_object_scene = int(meta.get("scene_objects", 1)) > 1
+    instance_mask, instance_method = _instance_object_mask(
+        instance,
+        id_to_labels,
+        object_id,
+        strict_target=multi_object_scene,
+    )
     flat_points = pcd_map[valid_mask].reshape(-1, 3)
 
     if mask_mode == "mesh":
+        if multi_object_scene:
+            raise ValueError(
+                "mask=mesh is unsafe for multi-object scenes because occluder points "
+                "can fall inside the target mesh bbox. Use --mask instance or --mask auto."
+            )
         select_flat, mesh_debug = _mesh_object_mask(
             flat_points, object_id, meta, model_root, margin
         )
@@ -221,13 +241,18 @@ def _select_pixel_mask(
             )
         return select_flat, instance_method, {"instance_method": instance_method}
 
-    if _mask_is_degenerate(instance_mask, valid_mask):
+    if not multi_object_scene and _mask_is_degenerate(instance_mask, valid_mask):
         select_flat, mesh_debug = _mesh_object_mask(
             flat_points, object_id, meta, model_root, margin
         )
         return select_flat, "mesh_bbox", {"instance_method": instance_method, **mesh_debug}
 
     select_flat = instance_mask[valid_mask]
+    if not select_flat.any():
+        raise ValueError(
+            "mask=auto found zero target object pixels. "
+            "Check instance segmentation labels for the target object."
+        )
     return select_flat, instance_method, {"instance_method": instance_method}
 
 
@@ -242,8 +267,14 @@ def _select_live_pixel_mask(
     object_pose_robot_m: np.ndarray | None,
     mesh_path: Path | None,
     margin: float,
+    multi_object_scene: bool = False,
 ) -> tuple[np.ndarray, str, dict]:
-    instance_mask, instance_method = _instance_object_mask(instance, id_to_labels, object_id)
+    instance_mask, instance_method = _instance_object_mask(
+        instance,
+        id_to_labels,
+        object_id,
+        strict_target=multi_object_scene,
+    )
     flat_points = pcd_map[valid_mask].reshape(-1, 3)
 
     def _mesh_fallback() -> tuple[np.ndarray, str, dict]:
@@ -260,6 +291,11 @@ def _select_live_pixel_mask(
         return select_flat, "mesh_bbox", {"instance_method": instance_method, **mesh_debug}
 
     if mask_mode == "mesh":
+        if multi_object_scene:
+            raise ValueError(
+                "mask_mode='mesh' is unsafe for multi-object scenes. "
+                "Use mask_mode='instance' or 'auto'."
+            )
         return _mesh_fallback()
 
     if mask_mode == "instance":
@@ -271,10 +307,14 @@ def _select_live_pixel_mask(
             )
         return select_flat, instance_method, {"instance_method": instance_method}
 
-    if _mask_is_degenerate(instance_mask, valid_mask):
+    if not multi_object_scene and _mask_is_degenerate(instance_mask, valid_mask):
         return _mesh_fallback()
 
     select_flat = instance_mask[valid_mask]
+    if not select_flat.any():
+        raise ValueError(
+            "mask_mode='auto' found zero target object pixels for this observation."
+        )
     return select_flat, instance_method, {"instance_method": instance_method}
 
 
@@ -423,6 +463,13 @@ def extract_object_partial_pc(
     pixel_mask = np.zeros(instance.shape, dtype=bool)
     pixel_mask[valid_mask] = select_flat
 
+    scene_objects = int(meta.get("scene_objects", 1))
+    target_pixels = int(pixel_mask.sum())
+    valid_pixels = int(valid_mask.sum())
+    visible_target_fraction = (
+        float(target_pixels / valid_pixels) if valid_pixels > 0 else 0.0
+    )
+
     payload: dict = {
         "partial_pc": object_points,
         "object_id": object_id,
@@ -437,6 +484,11 @@ def extract_object_partial_pc(
         "camera_pose_7d": np.asarray(camera_meta["pose_7d"], dtype=np.float64),
         "intrinsics_3x3": np.asarray(camera_meta["intrinsics_3x3"], dtype=np.float64),
         "instance_mask": pixel_mask,
+        "occlusion_mode": "multi_object" if scene_objects > 1 else "single_object",
+        "scene_objects": scene_objects,
+        "scene_object_ids": meta.get("scene_object_ids", [object_id]),
+        "distractor_ids": meta.get("distractor_ids", []),
+        "visible_target_fraction": visible_target_fraction,
     }
 
     if normals_map is not None:

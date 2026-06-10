@@ -25,7 +25,7 @@ parser.add_argument(
 )
 parser.add_argument("--max_iterations", type=int, default=None, help="RL Policy training iterations.")
 parser.add_argument("--save_camera_data", action="store_true", default=False, help="Save camera data.")
-parser.add_argument("--output_dir", type=str, default="datasets/sqnet_isaac", help="Dataset output directory.")
+parser.add_argument("--output_dir", type=str, default="datasets/supersq_grasp_data", help="Dataset output directory.")
 parser.add_argument(
     "--max_episodes",
     type=int,
@@ -43,13 +43,32 @@ parser.add_argument(
     type=float,
     default=None,
     help="SQ top-down camera height above the table (meters). "
-    "Default: TOPDOWN_CAMERA_HEIGHT in isaac_env/sqnet_env_data/element_cfg.py.",
+    "Default: TOPDOWN_CAMERA_HEIGHT in isaac_env/supersq_grasp_data/element_cfg.py.",
 )
 parser.add_argument(
     "--obj_ids",
     type=str,
     default=None,
-    help="Comma-separated object IDs for classical tasks (e.g. 001,010,016).",
+    help="Comma-separated object IDs for classical / SQ-v0-Data tasks (e.g. 001,004,011).",
+)
+parser.add_argument(
+    "--scene_objects",
+    type=int,
+    default=1,
+    help="SQ-v0-Data: number of objects placed on the table per episode (default: 1).",
+)
+parser.add_argument(
+    "--export_profile",
+    type=str,
+    default="full",
+    choices=["full", "lite"],
+    help="SQ-v0-Data export bundle: full (all tensors + scene.pt) or lite (meta, PNGs, partial_pc).",
+)
+parser.add_argument(
+    "--save_scene_pc",
+    action="store_true",
+    default=False,
+    help="SQ-v0-Data: save per-camera pcd_map.npy (always saved in full profile; optional in lite).",
 )
 parser.add_argument("--sq_config", type=str, default=None, help="SQNet config YAML for supersq_grasp-v0.")
 parser.add_argument("--sq_checkpoint", type=str, default=None, help="SQNet checkpoint for supersq_grasp-v0.")
@@ -100,7 +119,7 @@ settings.set("/rtx/realtime/mgpu/autoTiling/enabled", True)
 import time
 
 if args_cli.task.startswith("SQ-"):
-    from isaac_env.sqnet_env_data import SQPickSmData as AIRSim
+    from isaac_env.supersq_grasp_data import SQPickSmData as AIRSim
 elif args_cli.task.startswith("supersq"):
     from isaac_env.supersq_grasp_env import SuperSQPickSm as AIRSim
 elif args_cli.task == "object-v1-Classical-2f85":

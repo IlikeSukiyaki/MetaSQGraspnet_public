@@ -18,12 +18,16 @@ from grasp_sampler.visualize_grasp_object import (  # noqa: E402
     convert_sampler_to_ee_frame,
     create_easy_gripper,
 )
+from tools.supersq_debug_paths import add_debug_dir_arguments, resolve_debug_dir_from_args  # noqa: E402
 
 try:
     import open3d as o3d
     import trimesh
 except ImportError as exc:  # pragma: no cover - optional debug tool
     raise SystemExit("Open3D and trimesh are required. Install open3d and trimesh.") from exc
+
+# Vivid green for the selected Hand-E grasp pose (Open3D RGB in [0, 1]).
+GRASP_POSE_COLOR = (0.0, 0.85, 0.25)
 
 
 def _load_json(debug_dir: Path) -> dict:
@@ -66,14 +70,28 @@ def _resolve_grasp_pose_cm(selection: dict, frame: str) -> np.ndarray:
     return pose_cm
 
 
-def _trimesh_to_open3d(mesh: trimesh.Trimesh) -> o3d.geometry.TriangleMesh:
+def _trimesh_to_open3d(
+    mesh: trimesh.Trimesh,
+    *,
+    uniform_color: tuple[float, float, float] | None = None,
+) -> o3d.geometry.TriangleMesh:
     o3d_mesh = o3d.geometry.TriangleMesh(
         o3d.utility.Vector3dVector(np.asarray(mesh.vertices, dtype=np.float64)),
         o3d.utility.Vector3iVector(np.asarray(mesh.faces, dtype=np.int32)),
     )
-    if mesh.visual.face_colors is not None and len(mesh.visual.face_colors):
-        colors = np.asarray(mesh.visual.face_colors[:, :3], dtype=np.float64) / 255.0
-        o3d_mesh.vertex_colors = o3d.utility.Vector3dVector(colors)
+    if uniform_color is not None:
+        o3d_mesh.paint_uniform_color(uniform_color)
+    elif mesh.visual.face_colors is not None and len(mesh.visual.face_colors):
+        face_colors = np.asarray(mesh.visual.face_colors[:, :3], dtype=np.float64) / 255.0
+        vertex_colors = np.zeros((len(mesh.vertices), 3), dtype=np.float64)
+        counts = np.zeros(len(mesh.vertices), dtype=np.int32)
+        for face_idx, face in enumerate(mesh.faces):
+            for vert_idx in face:
+                vertex_colors[vert_idx] += face_colors[face_idx]
+                counts[vert_idx] += 1
+        valid = counts > 0
+        vertex_colors[valid] /= counts[valid, None]
+        o3d_mesh.vertex_colors = o3d.utility.Vector3dVector(vertex_colors)
     o3d_mesh.compute_vertex_normals()
     return o3d_mesh
 
@@ -95,7 +113,7 @@ def _make_gripper_mesh(
     )
     gripper.apply_scale(0.01)
     gripper.apply_transform(_pose_cm_to_m(pose_cm))
-    return _trimesh_to_open3d(gripper)
+    return _trimesh_to_open3d(gripper, uniform_color=GRASP_POSE_COLOR)
 
 
 def _make_contact_frame(selection: dict) -> o3d.geometry.TriangleMesh | None:
@@ -198,12 +216,7 @@ def inspect_grasps(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--dir",
-        type=Path,
-        required=True,
-        help="Path to one env*_epi*_attempt*_obj* debug folder.",
-    )
+    add_debug_dir_arguments(parser)
     parser.add_argument(
         "--frame",
         choices=["sampler", "ee"],
@@ -232,7 +245,7 @@ def main() -> None:
     )
     args = parser.parse_args()
     inspect_grasps(
-        args.dir,
+        resolve_debug_dir_from_args(args),
         frame=args.frame,
         show_context=not args.no_context,
         show_contact=not args.no_contact,

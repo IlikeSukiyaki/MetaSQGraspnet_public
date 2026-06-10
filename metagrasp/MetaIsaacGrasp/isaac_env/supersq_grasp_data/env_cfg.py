@@ -101,7 +101,57 @@ def sq_pcd_capture(env):
     return torch.stack(pcds, 0).transpose(0, 1)
 
 
-def sq_reset_single_random_object(
+MIN_TABLE_SEP = 0.08
+_PLACEMENT_MAX_RETRIES = 20
+
+
+def _sample_table_poses(
+    ranges: torch.Tensor,
+    count: int,
+    device: torch.device,
+    min_sep: float = MIN_TABLE_SEP,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Sample independent table poses with a minimum XY separation."""
+    best_positions = None
+    best_orientations = None
+
+    for _ in range(_PLACEMENT_MAX_RETRIES):
+        rand_samples = math_utils.sample_uniform(
+            ranges[:, 0],
+            ranges[:, 1],
+            (count, 6),
+            device=device,
+        )
+        candidate_positions = rand_samples[:, :3]
+        orientations_delta = math_utils.quat_from_euler_xyz(
+            rand_samples[:, 3],
+            rand_samples[:, 4],
+            rand_samples[:, 5],
+        )
+        if count < 2:
+            return candidate_positions, orientations_delta
+
+        too_close = False
+        for i in range(count):
+            for j in range(i + 1, count):
+                dist = torch.linalg.norm(
+                    candidate_positions[i, :2] - candidate_positions[j, :2]
+                )
+                if dist < min_sep:
+                    too_close = True
+                    break
+            if too_close:
+                break
+
+        best_positions = candidate_positions
+        best_orientations = orientations_delta
+        if not too_close:
+            return candidate_positions, orientations_delta
+
+    return best_positions, best_orientations
+
+
+def sq_reset_scene_objects(
     env: ManagerBasedEnv,
     env_ids: torch.Tensor,
     pose_range: dict[str, tuple[float, float]],
@@ -109,10 +159,11 @@ def sq_reset_single_random_object(
     asset_cfg: SceneEntityCfg = SceneEntityCfg("objs"),
     drop_height: float = 0.1,
 ):
-    """Place one random object on the table and move the others off-screen."""
+    """Place K random objects on the table and move the rest off-screen."""
     asset = env.scene[asset_cfg.name]
     root_states = asset.data.default_object_state[env_ids].clone()
     env_num, obj_num = root_states.size(0), root_states.size(1)
+    table_count = min(int(getattr(env, "scene_objects", 1)), obj_num)
 
     range_list = [pose_range.get(key, (0.0, 0.0)) for key in ["x", "y", "z", "roll", "pitch", "yaw"]]
     ranges = torch.tensor(range_list, device=asset.device)
@@ -125,28 +176,27 @@ def sq_reset_single_random_object(
     velocities = root_states[..., 7:13].clone()
 
     for batch_idx, env_id in enumerate(env_ids):
-        active_idx = int(torch.randint(0, obj_num, (1,), device=asset.device).item())
-        env.obj_chosen[env_id] = active_idx
+        selected = torch.randperm(obj_num, device=asset.device)[:table_count]
+        target_idx = int(selected[torch.randint(0, table_count, (1,), device=asset.device)].item())
+        env.obj_chosen[env_id] = target_idx
 
-        rand_samples = math_utils.sample_uniform(
-            ranges[:, 0],
-            ranges[:, 1],
-            (1, 6),
-            device=asset.device,
-        ).squeeze(0)
-        positions[batch_idx, active_idx] = positions[batch_idx, active_idx] + rand_samples[:3]
-        orientations_delta = math_utils.quat_from_euler_xyz(
-            rand_samples[3].view(1),
-            rand_samples[4].view(1),
-            rand_samples[5].view(1),
-        ).squeeze(0)
-        orientations[batch_idx, active_idx] = math_utils.quat_mul(
-            root_states[batch_idx, active_idx, 3:7],
-            orientations_delta,
+        table_positions, table_orientations_delta = _sample_table_poses(
+            ranges,
+            table_count,
+            asset.device,
         )
+        for table_slot, obj_idx in enumerate(selected.tolist()):
+            positions[batch_idx, obj_idx] = (
+                positions[batch_idx, obj_idx] + table_positions[table_slot]
+            )
+            orientations[batch_idx, obj_idx] = math_utils.quat_mul(
+                root_states[batch_idx, obj_idx, 3:7],
+                table_orientations_delta[table_slot],
+            )
 
+        selected_set = set(selected.tolist())
         for obj_idx in range(obj_num):
-            if obj_idx == active_idx:
+            if obj_idx in selected_set:
                 continue
             positions[batch_idx, obj_idx] = env.scene.env_origins[env_id].clone()
             positions[batch_idx, obj_idx, 2] = drop_height
@@ -302,7 +352,7 @@ class EventCfg:
             mode="reset",
         )
         self.reset_obj_pos = EventTerm(
-            func=sq_reset_single_random_object,
+            func=sq_reset_scene_objects,
             mode="reset",
             params={
                 "pose_range": {

@@ -25,22 +25,22 @@ EXAMPLES = """
 Examples:
   # Recommended default: mesh fallback + instance-seg colors
   python tools/extract_partial_pc.py \\
-    --sample datasets/sqnet_isaac/001/epi_000001 \\
+    --sample datasets/supersq_grasp_data/001/epi_000001 \\
     --camera topdown --mask auto --color instance --show
 
   # Force instance segmentation mask only
   python tools/extract_partial_pc.py \\
-    --sample datasets/sqnet_isaac/001/epi_000001 \\
+    --sample datasets/supersq_grasp_data/001/epi_000001 \\
     --camera onhand --mask instance --color instance
 
   # Force mesh bounding-box mask (works on current single-object data)
   python tools/extract_partial_pc.py \\
-    --sample datasets/sqnet_isaac/001/epi_000001 \\
+    --sample datasets/supersq_grasp_data/001/epi_000001 \\
     --camera topdown --mask mesh --color rgb --ply
 
   # Batch both cameras for all episodes
   python tools/extract_partial_pc.py \\
-    --input datasets/sqnet_isaac/001 \\
+    --input datasets/supersq_grasp_data/001 \\
     --camera both --mask auto --color instance
 """
 
@@ -142,8 +142,8 @@ def main() -> None:
         epilog=EXAMPLES,
     )
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--sample", type=Path, help="One episode directory, e.g. datasets/sqnet_isaac/001/epi_000001.")
-    group.add_argument("--input", type=Path, help="Object directory with epi_* samples, e.g. datasets/sqnet_isaac/001.")
+    group.add_argument("--sample", type=Path, help="One episode directory, e.g. datasets/supersq_grasp_data/001/epi_000001.")
+    group.add_argument("--input", type=Path, help="Object directory with epi_* samples, e.g. datasets/supersq_grasp_data/001.")
 
     parser.add_argument(
         "--camera",
