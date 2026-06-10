@@ -5,7 +5,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from tools.supersq_debug_paths import add_debug_dir_arguments, resolve_debug_dir_from_args  # noqa: E402
 
 try:
     import open3d as o3d
@@ -81,9 +88,9 @@ def inspect_debug_dir(debug_dir: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--dir", type=Path, required=True, help="Path to one env*_epi*_attempt*_obj* debug folder.")
+    add_debug_dir_arguments(parser)
     args = parser.parse_args()
-    inspect_debug_dir(args.dir)
+    inspect_debug_dir(resolve_debug_dir_from_args(args))
 
 
 if __name__ == "__main__":

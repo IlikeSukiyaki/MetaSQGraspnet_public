@@ -109,6 +109,8 @@ ls /home/sustech/桌面/DSQNet/metagrasp/MetaIsaacGrasp/UR_grasp_database
 
 SuperSQ does **not** require `textured.obj.hand_e.hdf5` at runtime (unlike `object-v0-Classical`).
 
+**Shared demo object pool:** `000`, `001`, `004`, `011` (`DEMO_OBJ_IDS` in `grasp_sampler/database_paths.py`). These IDs are the default for `supersq_grasp-v0`, `object-v0-Classical`, and `SQ-v0-Data`. A lite demo dataset lives under [`datasets/supersq_grasp_data/demo/`](../datasets/supersq_grasp_data/demo/README.md).
+
 ---
 
 ## 1. Prepare object assets (if needed)
@@ -289,10 +291,36 @@ cd /home/sustech/桌面/DSQNet/metagrasp/MetaIsaacGrasp
 conda activate env_isaaclab
 ```
 
-Set your attempt directory once:
+### Shorthand path selection
+
+You do not need to build long `env*_epi*_attempt*_obj*` paths manually. All three inspect tools accept:
+
+| Flag | Example | Meaning |
+|------|---------|---------|
+| `--run` | `--run 2026-06-09_19-01-25` | One timestamp under `logs/sq_debug/supersq_grasp-v0/` |
+| `--latest` | `--latest` | Newest run (episode 0 by default) |
+| `--episode` | `--episode 2` | Pick `env0_epi000002_...` inside the run |
+| `--list-runs` | `--list-runs` | Print available run timestamps |
+| `--list-episodes` | `--run 2026-06-09_19-01-25 --list-episodes` | Print attempt folders in a run |
+| `--dir` | full path | Still supported for explicit folders |
+
+Quick examples for run `2026-06-09_19-01-25`:
 
 ```bash
-DEBUG_DIR=logs/sq_debug/supersq_grasp-v0/2026-06-09_18-43-55/env0_epi000000_attempt0_obj011
+# List runs / episodes
+python tools/inspect_supersq_obs.py --list-runs
+python tools/inspect_supersq_obs.py --run 2026-06-09_19-01-25 --list-episodes
+
+# Visualize episode 0
+python tools/inspect_supersq_obs.py --run 2026-06-09_19-01-25 --no-show
+python tools/inspect_supersq_debug.py --run 2026-06-09_19-01-25
+python tools/inspect_supersq_grasps.py --run 2026-06-09_19-01-25
+
+# Latest run, episode 2
+python tools/inspect_supersq_debug.py --latest --episode 2
+
+# Save observation montages for all episodes in one run
+python tools/inspect_supersq_obs.py --run 2026-06-09_19-01-25 --all-episodes --no-show
 ```
 
 ### 4.1 SQ mesh + partial point cloud
@@ -300,7 +328,7 @@ DEBUG_DIR=logs/sq_debug/supersq_grasp-v0/2026-06-09_18-43-55/env0_epi000000_atte
 Tool: [`tools/inspect_supersq_debug.py`](../tools/inspect_supersq_debug.py)
 
 ```bash
-python tools/inspect_supersq_debug.py --dir "$DEBUG_DIR"
+python tools/inspect_supersq_debug.py --run 2026-06-09_19-01-25
 ```
 
 Shows:
@@ -315,7 +343,7 @@ Shows:
 Tool: [`tools/inspect_supersq_grasps.py`](../tools/inspect_supersq_grasps.py)
 
 ```bash
-python tools/inspect_supersq_grasps.py --dir "$DEBUG_DIR"
+python tools/inspect_supersq_grasps.py --run 2026-06-09_19-01-25
 ```
 
 Shows:
@@ -330,13 +358,13 @@ Useful options:
 
 ```bash
 # Executed EE frame instead of sampler frame
-python tools/inspect_supersq_grasps.py --dir "$DEBUG_DIR" --frame ee
+python tools/inspect_supersq_grasps.py --run 2026-06-09_19-01-25 --frame ee
 
 # Grasp only (no SQ mesh / partial PC)
-python tools/inspect_supersq_grasps.py --dir "$DEBUG_DIR" --no-context
+python tools/inspect_supersq_grasps.py --run 2026-06-09_19-01-25 --no-context
 
 # Embed axes inside the gripper mesh
-python tools/inspect_supersq_grasps.py --dir "$DEBUG_DIR" --show-axis
+python tools/inspect_supersq_grasps.py --run 2026-06-09_19-01-25 --show-axis
 ```
 
 ### 4.3 Depth and instance segmentation
@@ -346,10 +374,8 @@ Tool: [`tools/inspect_supersq_obs.py`](../tools/inspect_supersq_obs.py)
 Requires a run saved with `--save_sq_debug` using the current codebase, which exports PNGs under `observation/`:
 
 ```bash
-python tools/inspect_supersq_obs.py --dir "$DEBUG_DIR"
+python tools/inspect_supersq_obs.py --run 2026-06-09_19-01-25
 ```
-
-By default this **shows the four OpenCV windows and saves**:
 
 - `observation/rgb.png`
 - `observation/depth.png`
@@ -360,13 +386,13 @@ By default this **shows the four OpenCV windows and saves**:
 Save without opening windows:
 
 ```bash
-python tools/inspect_supersq_obs.py --dir "$DEBUG_DIR" --no-show
+python tools/inspect_supersq_obs.py --run 2026-06-09_19-01-25 --no-show
 ```
 
 Display only, without rewriting PNGs:
 
 ```bash
-python tools/inspect_supersq_obs.py --dir "$DEBUG_DIR" --no-save
+python tools/inspect_supersq_obs.py --run 2026-06-09_19-01-25 --no-save
 ```
 
 Opens OpenCV windows for:
@@ -380,12 +406,10 @@ Raw arrays are also saved as `.npy` in the same folder.
 
 For older debug folders that only contain `partial_pc.npy`, the tool falls back to showing the recovered `object_mask` and prints a note to re-run with `--save_sq_debug`.
 
-Example for your run:
+Example:
 
 ```bash
-DEBUG_DIR=logs/sq_debug/supersq_grasp-v0/2026-06-09_18-43-55/env0_epi000000_attempt0_obj011
-
-python tools/inspect_supersq_obs.py --dir "$DEBUG_DIR"
+python tools/inspect_supersq_obs.py --run 2026-06-09_19-01-25
 ```
 
 If that folder has no `observation/` subfolder yet, re-run once:
@@ -401,7 +425,8 @@ Then inspect the new timestamp folder.
 ### 4.4 Inspect numeric grasp / SQ data
 
 ```bash
-cat "$DEBUG_DIR/sq_fit.json" | python -m json.tool
+python tools/inspect_supersq_obs.py --run 2026-06-09_19-01-25 --episode 0
+cat logs/sq_debug/supersq_grasp-v0/2026-06-09_19-01-25/env0_epi000000_attempt0_obj001/sq_fit.json | python -m json.tool
 ```
 
 ### 4.5 Success execution videos
@@ -429,11 +454,12 @@ for OBJ in 000 001 004 011; do
 done
 ```
 
-After each run, note the printed `[INFO] SuperSQ debug output:` path and visualize:
+After each run, note the printed `[INFO] SuperSQ debug output:` timestamp and visualize:
 
 ```bash
-python tools/inspect_supersq_debug.py --dir logs/sq_debug/supersq_grasp-v0/<timestamp>/env0_epi000000_attempt0_obj004
-python tools/inspect_supersq_grasps.py --dir logs/sq_debug/supersq_grasp-v0/<timestamp>/env0_epi000000_attempt0_obj004
+python tools/inspect_supersq_debug.py --run <timestamp>
+python tools/inspect_supersq_grasps.py --run <timestamp>
+python tools/inspect_supersq_obs.py --run <timestamp> --no-show
 ```
 
 ---
@@ -495,6 +521,7 @@ Run visualization from a desktop session (or with working OpenGL forwarding if r
 | [`tools/sq_partial_pc.py`](../tools/sq_partial_pc.py) | Partial PC extraction from live obs |
 | [`grasp_sampler/sq_mesh.py`](../grasp_sampler/sq_mesh.py) | SQ mesh + online antipodal sampling |
 | [`grasp_sampler/runtime.py`](../grasp_sampler/runtime.py) | Grasp filtering / ranking |
+| [`tools/supersq_debug_paths.py`](../tools/supersq_debug_paths.py) | Shared `--run` / `--latest` path resolution |
 | [`tools/inspect_supersq_debug.py`](../tools/inspect_supersq_debug.py) | SQ + partial PC viewer |
 | [`tools/inspect_supersq_grasps.py`](../tools/inspect_supersq_grasps.py) | Hand-E grasp pose viewer |
 | [`tools/inspect_supersq_obs.py`](../tools/inspect_supersq_obs.py) | Depth / instance / mask viewer |
@@ -506,5 +533,5 @@ Run visualization from a desktop session (or with working OpenGL forwarding if r
 | Task | Purpose |
 |------|---------|
 | `object-v0-Classical` | Baseline: precomputed HDF5 grasps, no SQNet |
-| `SQ-v0-Data` | Collect dual-camera synthetic data for SQNet training |
+| `SQ-v0-Data` | Collect dual-camera synthetic data for SQNet training ([demo samples](../datasets/supersq_grasp_data/demo/README.md)) |
 | `supersq_grasp-v0` | End-to-end live SQ perception + grasp + execution |

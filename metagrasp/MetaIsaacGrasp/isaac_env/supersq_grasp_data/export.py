@@ -1,4 +1,4 @@
-"""Dataset export helpers for SQ-v0-Data."""
+"""Dataset export helpers for SQ-v0-Data (supersq_grasp_data package)."""
 
 from __future__ import annotations
 
@@ -176,14 +176,31 @@ def _save_partial_point_clouds(sample_dir: Path, object_id: str) -> dict[str, An
     return partial_meta
 
 
-def save_scene_snapshot(env, env_id: int, obs_buf: dict[str, Any], output_dir: str | Path) -> Path:
-    """Save one stable SQ scene with all camera tensors and metadata."""
+def save_scene_snapshot(
+    env,
+    env_id: int,
+    obs_buf: dict[str, Any],
+    output_dir: str | Path,
+    export_profile: str = "full",
+    save_scene_pc: bool = False,
+) -> Path:
+    """Save one stable SQ scene with camera tensors and metadata."""
+    lite_export = export_profile == "lite"
     policy = obs_buf["policy"] if "policy" in obs_buf else obs_buf
     episode = int(env.epi_step_count[env_id, 0].detach().cpu().item())
 
-    obj_poses_robot, scene_obj_id = _collect_object_poses(env, env_id)
+    scene_objects = int(getattr(env, "scene_objects", 1))
+    if scene_objects > 1:
+        obj_poses_robot, scene_obj_id = _collect_object_poses(env, env_id)
+    else:
+        object_id_preview = _active_object_id(env, env_id, [])
+        obj_poses_robot, scene_obj_id = _collect_object_poses(
+            env, env_id, active_object_id=object_id_preview
+        )
+
     object_id = _active_object_id(env, env_id, scene_obj_id)
-    obj_poses_robot, scene_obj_id = _collect_object_poses(env, env_id, active_object_id=object_id)
+    target_object_id = object_id
+    distractor_ids = [obj_label for obj_label in scene_obj_id if obj_label != target_object_id]
 
     sample_dir = Path(output_dir) / object_id / f"epi_{episode:06d}"
     sample_dir.mkdir(parents=True, exist_ok=True)
@@ -212,16 +229,26 @@ def save_scene_snapshot(env, env_id: int, obs_buf: dict[str, Any], output_dir: s
         camera_pose = _to_cpu_tensor(env.get_camera_pose(cam_id, env_id))
         id_to_labels = _camera_id_to_labels(env, cam_id, env_id)
 
-        np.save(camera_dir / "depth.npy", np.squeeze(_to_numpy(depth_cam)).astype(np.float32))
-        np.save(camera_dir / "instance.npy", np.squeeze(_to_numpy(instance_cam)).astype(np.int32))
-        np.save(camera_dir / "normals.npy", _to_numpy(normal_cam).astype(np.float32))
-        np.save(camera_dir / "pcd_map.npy", _to_numpy(pcd_cam).astype(np.float32))
         _save_rgb(camera_dir / "rgb.png", _to_numpy(rgb_cam))
         _save_depth_png(camera_dir / "depth.png", _to_numpy(depth_cam))
         _save_instance_png(camera_dir / "instance.png", _to_numpy(instance_cam))
 
-        depth_np = np.squeeze(_to_numpy(depth_cam))
-        pcd_np = _to_numpy(pcd_cam)
+        depth_arr = np.squeeze(_to_numpy(depth_cam)).astype(np.float32)
+        instance_arr = np.squeeze(_to_numpy(instance_cam)).astype(np.int32)
+        pcd_arr = _to_numpy(pcd_cam).astype(np.float32)
+
+        if not lite_export:
+            np.save(camera_dir / "depth.npy", depth_arr)
+            np.save(camera_dir / "instance.npy", instance_arr)
+            np.save(camera_dir / "normals.npy", _to_numpy(normal_cam).astype(np.float32))
+            np.save(camera_dir / "pcd_map.npy", pcd_arr)
+        else:
+            np.save(camera_dir / "depth.npy", depth_arr)
+            np.save(camera_dir / "instance.npy", instance_arr)
+            np.save(camera_dir / "pcd_map.npy", pcd_arr)
+
+        depth_np = depth_arr
+        pcd_np = pcd_arr
         valid_mask = np.isfinite(depth_np) & (depth_np > 0.0) & (depth_np < DEPTH_MAX)
         if pcd_np is not None:
             valid_mask &= np.isfinite(pcd_np).all(axis=-1)
@@ -255,14 +282,23 @@ def save_scene_snapshot(env, env_id: int, obs_buf: dict[str, Any], output_dir: s
             "valid_pixel_count": valid_pixel_counts[role_name],
         }
 
-    scene_bundle["obj_poses_robot"] = obj_poses_robot
-    scene_bundle["obj_id"] = scene_obj_id
-    torch.save(scene_bundle, sample_dir / "scene.pt")
+    if not lite_export:
+        scene_bundle["obj_poses_robot"] = obj_poses_robot
+        scene_bundle["obj_id"] = scene_obj_id
+        torch.save(scene_bundle, sample_dir / "scene.pt")
 
     meta = {
         "task": "SQ-v0-Data",
         "object_id": object_id,
+        "target_object_id": target_object_id,
+        "scene_objects": scene_objects,
+        "scene_object_ids": scene_obj_id,
+        "distractor_ids": distractor_ids,
         "episode": episode,
+        "export": {
+            "profile": export_profile,
+            "save_scene_pc": bool(save_scene_pc),
+        },
         "frames": {
             "robot": ROBOT_NAME,
             "world": "IsaacLab",
@@ -283,13 +319,26 @@ def save_scene_snapshot(env, env_id: int, obs_buf: dict[str, Any], output_dir: s
     with (sample_dir / "meta.json").open("w", encoding="utf-8") as file:
         json.dump(meta, file, indent=2)
 
+    if lite_export:
+        for role_name in TOPDOWN_CAMERA_ROLE_NAMES.values():
+            camera_dir = sample_dir / role_name
+            (camera_dir / "depth.npy").unlink(missing_ok=True)
+            (camera_dir / "instance.npy").unlink(missing_ok=True)
+            if not save_scene_pc:
+                (camera_dir / "pcd_map.npy").unlink(missing_ok=True)
+
     manifest_path = Path(output_dir) / "manifest.jsonl"
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_row = {
         "sample_dir": str(sample_dir),
         "object_id": object_id,
+        "target_object_id": target_object_id,
+        "scene_objects": scene_objects,
+        "scene_object_ids": scene_obj_id,
+        "distractor_ids": distractor_ids,
         "episode": episode,
-        "scene_pt": str(sample_dir / "scene.pt"),
+        "export_profile": export_profile,
+        "scene_pt": None if lite_export else str(sample_dir / "scene.pt"),
         "meta_json": str(sample_dir / "meta.json"),
         "valid_pixel_counts": valid_pixel_counts,
     }

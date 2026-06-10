@@ -1,4 +1,4 @@
-# SQ-v0-Data (`sqnet_env_data`)
+# SQ-v0-Data (`supersq_grasp_data`)
 
 Isaac Lab environment package for **SQNet synthetic data collection**. It extends the AIR grasping stack with a dual-camera setup, randomized object poses, and structured dataset export for downstream grasp-pose synthesis (`rgbsq_grasp`).
 
@@ -9,7 +9,7 @@ Registered Gym task: **`SQ-v0-Data`**
 ## Package overview
 
 ```
-sqnet_env_data/
+supersq_grasp_data/
 ├── __init__.py      # Gym registration
 ├── element_cfg.py   # Scene constants, object/camera defaults
 ├── env_cfg.py       # Scene, observations, events, MDP config
@@ -28,7 +28,7 @@ flowchart LR
     B --> C[env.SQEnvData]
     C --> D[env_cfg observations]
     C --> E[export.save_scene_snapshot]
-    E --> F[datasets/sqnet_isaac/...]
+    E --> F[datasets/supersq_grasp_data/...]
     F --> G[tools/extract_partial_pc.py]
     F --> H[tools/convert_sq_to_npy.py]
     H --> I[rgbsq_grasp]
@@ -51,12 +51,13 @@ Scene-level constants inherited from `air_env_base.element_cfg`, narrowed for SQ
 
 | Item | Value / role |
 |------|----------------|
-| `NUM_OBJS` | `2` |
-| `OBJ_LABLE` | `["000", "001"]` |
+| `DEMO_OBJ_IDS` | `["000", "001", "004", "011"]` in `grasp_sampler/database_paths.py` |
+| `NUM_OBJS` | len(`DEMO_OBJ_IDS`) by default |
+| `OBJ_LABLE` | same as `DEMO_OBJ_IDS` |
 | `N_MULTIPLE_CAM` | `2` (on-hand + top-down) |
-| `MODEL_PATH` | `models/models_ifl` |
+| `MODEL_PATH` | `UR_grasp_database/` (fallback: legacy `models/models_ifl`) |
 | `MGN_PATHS` | USD assets per object ID |
-| `SQ_DATA_ROOT` | Default output root: `datasets/sqnet_isaac` |
+| `SQ_DATA_ROOT` | Default output root: `datasets/supersq_grasp_data` |
 
 **Top-down camera tuning** (edit here):
 
@@ -73,11 +74,13 @@ TOPDOWN_CAMERA_QUAT = (0.0, 1.0, 0.0, 0.0)
 
 Objects are spawned with `semantic_tags` for instance segmentation.
 
-**Prerequisite:** physics-ready USD at `models/models_ifl/<id>/orbit_obj.usd` for each object. Convert from URDF via:
+**Prerequisite:** physics-ready USD at `UR_grasp_database/<id>/orbit_obj.usd` for each object. Convert from URDF via:
 
 ```bash
-python urdf_converter.py --input models/models_ifl/*/textured.urdf
+python urdf_converter.py --input UR_grasp_database/004/textured.urdf --headless
 ```
+
+Override the object pool at runtime with `--obj_ids 000,001,004,011` (same IDs as `supersq_grasp-v0` and `object-v0-Classical`).
 
 ### `env_cfg.py`
 
@@ -110,7 +113,7 @@ Dual-camera capture functions (stacked over `N_MULTIPLE_CAM`):
 #### Events (`EventCfg`)
 
 - `reset_robot_pos` — reset arm to default
-- `reset_obj_pos` — **`sq_reset_single_random_object`**: each episode places **one random object** on the table and moves the others off-screen; active index stored in `env.obj_chosen`
+- `reset_obj_pos` — **`sq_reset_scene_objects`**: each episode places **K objects** on the table (`--scene_objects`, default 1), picks one as the target (`env.obj_chosen`), and moves unselected pool objects off-screen
 
 #### MDP (`CellEnvCfg`)
 
@@ -128,6 +131,9 @@ Runtime environment class extending `AIREnvBase`.
 | `save_camera_data` | `False` | Enable dataset export |
 | `output_dir` | `SQ_DATA_ROOT` | Dataset root directory |
 | `topdown_height` | `TOPDOWN_CAMERA_HEIGHT` | Top-down camera height override |
+| `export_profile` | `"full"` | `"full"` or `"lite"` export bundle |
+| `save_scene_pc` | `False` | Keep `pcd_map.npy` in lite mode |
+| `scene_objects` | `1` | Number of objects placed on the table per episode |
 
 **Key behavior:**
 
@@ -146,7 +152,8 @@ CLI-facing wrapper used by `run.py`.
 
 - Parse env config for `SQ-v0-Data`
 - Apply `--topdown_height` to `camera_1`
-- Pass `--output_dir`, `--save_camera_data`, `--topdown_height` into `gym.make()`
+- Apply `--obj_ids` to `configure_data_objects()` before env creation
+- Pass `--output_dir`, `--save_camera_data`, `--topdown_height`, `--export_profile`, `--save_scene_pc`, `--scene_objects` into `gym.make()`
 - `propose_action()` — clones full-env `grasp_pose`, updates only inference envs (avoids empty-action crash)
 - `should_stop()` — stops when `num_saved_samples >= --max_episodes`
 
@@ -156,8 +163,9 @@ Writes one episode snapshot when the scene is stable.
 
 #### Per-episode layout
 
+**Full profile** (`--export_profile full`, default):
+
 ```
-<output_dir>/000/epi_000123/
 <output_dir>/001/epi_000123/
 ├── meta.json
 ├── scene.pt
@@ -170,6 +178,22 @@ Writes one episode snapshot when the scene is stable.
     ├── camera_onhand_auto_instance.npy
     └── camera_topdown_auto_instance.npy
 ```
+
+**Lite profile** (`--export_profile lite`):
+
+```
+<output_dir>/001/epi_000123/
+├── meta.json
+├── camera_onhand/
+│   ├── rgb.png, depth.png, instance.png
+│   └── pcd_map.npy          # only with --save_scene_pc
+├── camera_topdown/
+│   └── (same structure)
+└── partial_pc/
+    └── …
+```
+
+Curated demo samples: [`datasets/supersq_grasp_data/demo/`](../../datasets/supersq_grasp_data/demo/README.md).
 
 #### `save_scene_snapshot(env, env_id, obs_buf, output_dir)`
 
@@ -198,13 +222,32 @@ Re-exports `infer_state_machine_data` from `air_env_data.wp_cfg` — the Warp GP
 From `MetaIsaacGrasp/`:
 
 ```bash
-conda activate metagrasp
+conda activate env_isaaclab
 
-python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras \
+python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras --headless \
   --save_camera_data \
-  --output_dir datasets/sqnet_isaac \
-  --max_episodes 100 \
-  --topdown_height 1.8
+  --export_profile lite \
+  --obj_ids 000,001,004,011 \
+  --output_dir datasets/supersq_grasp_data/demo \
+  --max_episodes 4 \
+  --topdown_height 2.1
+```
+
+Or collect the full demo set in one script:
+
+```bash
+bash tools/collect_demo_dataset.sh datasets/supersq_grasp_data/demo
+```
+
+Multi-object occlusion test (2 objects on table, 1 target + 1 distractor):
+
+```bash
+python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras --headless \
+  --save_camera_data --export_profile lite \
+  --obj_ids 000,001,004,011 \
+  --scene_objects 2 \
+  --output_dir datasets/supersq_grasp_data/multi_obj \
+  --max_episodes 20
 ```
 
 ### CLI flags (via `run.py`)
@@ -212,8 +255,12 @@ python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras \
 | Flag | Description |
 |------|-------------|
 | `--save_camera_data` | Enable snapshot export |
-| `--output_dir` | Dataset root (default: `datasets/sqnet_isaac`) |
+| `--output_dir` | Dataset root (default: `datasets/supersq_grasp_data`) |
 | `--max_episodes` | Stop after N saved samples |
+| `--obj_ids` | Comma-separated object IDs (default: `DEMO_OBJ_IDS`) |
+| `--scene_objects` | Objects on the table per episode (default: `1`; max: pool size) |
+| `--export_profile` | `full` (all tensors + scene.pt) or `lite` (meta, PNGs, partial_pc) |
+| `--save_scene_pc` | Keep `pcd_map.npy` per camera in lite mode |
 | `--topdown_height` | Override top-down camera Z offset (meters above table) |
 | `--enable_cameras` | Required for camera rendering |
 | `--num_envs` | Parallel environments (typically `1` for data collection) |
@@ -224,10 +271,12 @@ Top-down XY position is configured in `element_cfg.py` (`TOPDOWN_CAMERA_XY`), no
 
 ## Downstream tools
 
-These live outside `sqnet_env_data/` but consume its output:
+These live outside `supersq_grasp_data/` but consume its output:
 
 | Tool | Purpose |
 |------|---------|
+| `tools/collect_demo_dataset.sh` | Collect lite demo episodes for all verified object IDs |
+| `tools/prune_sq_sample_lite.py` | Convert a full episode folder to lite export |
 | `tools/extract_partial_pc.py` | Extract object-only partial point clouds (`--mask`, `--color`) |
 | `tools/convert_sq_to_npy.py` | Convert raw samples to `rgbsq_grasp` `.npy` format |
 | `tools/inspect_sq_sample.py` | Inspect depth/seg/pcd of one sample |
@@ -239,9 +288,9 @@ See also: [`docs/partial_pc_extraction.md`](../../docs/partial_pc_extraction.md)
 ## Design notes
 
 - **Inherits AIR base** — robot, table, on-hand camera, controller, and most MDP terms come from `air_env_base` / `air_env_data`.
-- **Multi-object pool** — add IDs to `OBJ_LABLE` / `MGN_PATHS` / `NUM_OBJS` in `element_cfg.py`; one object is sampled per episode.
+- **Multi-object pool** — default `DEMO_OBJ_IDS`; override with `--obj_ids`; `--scene_objects K` places K distinct objects on the table per episode (one is the grasp target, others are distractors for occlusion testing).
 - **Dual-camera observations** — all image/depth/seg/pcd tensors are shaped `(num_envs, num_cameras, ...)`.
-- **Degenerate instance masks** — current single-object data may label the full image as one instance ID; partial PC export uses mesh-bbox fallback (`mask=auto`). Re-collecting with `semantic_tags` should improve segmentation quality.
+- **Degenerate instance masks** — current single-object data may label the full image as one instance ID; partial PC export uses mesh-bbox fallback (`mask=auto`). Multi-object scenes (`--scene_objects > 1`) rely on per-object instance labels and do not use mesh-bbox fallback.
 - **No RL training here** — this package is for synthetic dataset generation, not policy learning.
 
 ---
@@ -250,7 +299,7 @@ See also: [`docs/partial_pc_extraction.md`](../../docs/partial_pc_extraction.md)
 
 | Issue | Check |
 |-------|-------|
-| `FileNotFoundError` for USD | Run `urdf_converter.py` on object URDF |
+| `FileNotFoundError` for USD | Run `urdf_converter.py` on `UR_grasp_database/<id>/textured.urdf` |
 | Empty / wrong top-down view | Tune `TOPDOWN_CAMERA_XY` and `TOPDOWN_CAMERA_HEIGHT` in `element_cfg.py` |
 | No files saved | Pass `--save_camera_data`; wait until state machine reaches stable snapshot state |
 | Collection won't stop | Set `--max_episodes N` |

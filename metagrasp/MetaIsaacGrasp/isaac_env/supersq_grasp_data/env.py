@@ -21,6 +21,9 @@ class SQEnvData(AIREnvBase):
         save_camera_data: bool = False,
         output_dir: str = SQ_DATA_ROOT,
         topdown_height: float = TOPDOWN_CAMERA_HEIGHT,
+        export_profile: str = "full",
+        save_scene_pc: bool = False,
+        scene_objects: int = 1,
         **kwargs,
     ):
         super().__init__(
@@ -31,6 +34,9 @@ class SQEnvData(AIREnvBase):
         )
         self.output_dir = output_dir
         self.topdown_height = topdown_height
+        self.export_profile = export_profile
+        self.save_scene_pc = save_scene_pc
+        self.scene_objects = max(1, int(scene_objects))
         self.obj_label = OBJ_LABLE
         self.camera = [self.scene[f"camera_{i}"] for i in range(N_MULTIPLE_CAM)]
         self.saved_sample_dirs = []
@@ -91,6 +97,8 @@ class SQEnvData(AIREnvBase):
                             env_id,
                             obs_buf,
                             self.output_dir,
+                            export_profile=self.export_profile,
+                            save_scene_pc=self.save_scene_pc,
                         )
                         self.saved_sample_dirs.append(sample_dir)
                         self._saved_episode_ids.add(sample_key)

@@ -1,4 +1,4 @@
-"""Runtime SQNet bridge for the supersq grasp task."""
+"""Runtime Superquadrics Estimation bridge for the supersq grasp task."""
 
 from __future__ import annotations
 

@@ -8,6 +8,7 @@ import isaaclab.sim as sim_utils
 from isaaclab.assets import RigidObjectCfg
 
 from grasp_sampler.database_paths import (
+    DEMO_OBJ_IDS,
     legacy_models_ifl_roots,
     normalize_obj_id,
     resolve_grasp_database_root,
@@ -22,7 +23,7 @@ SUPERSQ_ENABLE_TOPDOWN_CAMERA = True
 apply_to_element_cfg(globals())
 N_MULTIPLE_CAM = 2
 
-CLASSICAL_OBJ_IDS = ["001"]
+CLASSICAL_OBJ_IDS = list(DEMO_OBJ_IDS)
 
 
 def _resolve_model_path() -> str:

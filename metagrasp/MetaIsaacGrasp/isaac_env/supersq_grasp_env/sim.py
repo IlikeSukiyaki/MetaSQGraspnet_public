@@ -1,4 +1,4 @@
-"""Simulator wrapper for SQNet-estimated superquadric grasping."""
+"""Simulator wrapper for estimated superquadric grasping."""
 
 import os
 from datetime import datetime

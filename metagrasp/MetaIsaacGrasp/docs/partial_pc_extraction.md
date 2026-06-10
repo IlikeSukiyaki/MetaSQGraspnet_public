@@ -15,7 +15,7 @@ cd metagrasp/MetaIsaacGrasp
 conda activate metagrasp
 
 python tools/extract_partial_pc.py \
-  --sample datasets/sqnet_isaac/001/epi_000001 \
+  --sample datasets/supersq_grasp_data/001/epi_000001 \
   --camera topdown \
   --mask auto \
   --color instance \
@@ -30,8 +30,8 @@ python tools/extract_partial_pc.py \
 
 | Flag | Description |
 |------|-------------|
-| `--sample PATH` | One episode folder, e.g. `datasets/sqnet_isaac/001/epi_000001` |
-| `--input PATH` | Object folder with many episodes, e.g. `datasets/sqnet_isaac/001` |
+| `--sample PATH` | One episode folder, e.g. `datasets/supersq_grasp_data/001/epi_000001` |
+| `--input PATH` | Object folder with many episodes, e.g. `datasets/supersq_grasp_data/001` |
 
 ### Camera
 
@@ -104,7 +104,7 @@ Each `.npy` dict contains:
 
 ```bash
 python tools/extract_partial_pc.py \
-  --sample datasets/sqnet_isaac/001/epi_000001 \
+  --sample datasets/supersq_grasp_data/001/epi_000001 \
   --camera topdown \
   --mask auto \
   --color instance \
@@ -115,7 +115,7 @@ python tools/extract_partial_pc.py \
 
 ```bash
 python tools/extract_partial_pc.py \
-  --sample datasets/sqnet_isaac/001/epi_000001 \
+  --sample datasets/supersq_grasp_data/001/epi_000001 \
   --camera topdown \
   --mask mesh \
   --color rgb \
@@ -126,7 +126,7 @@ python tools/extract_partial_pc.py \
 
 ```bash
 python tools/extract_partial_pc.py \
-  --input datasets/sqnet_isaac/001 \
+  --input datasets/supersq_grasp_data/001 \
   --camera both \
   --mask auto \
   --color instance
@@ -136,7 +136,7 @@ python tools/extract_partial_pc.py \
 
 ```bash
 python tools/convert_sq_to_npy.py \
-  --input datasets/sqnet_isaac/001 \
+  --input datasets/supersq_grasp_data/001 \
   --output ../../rgbsq_grasp/datasets/isaac_synth/001 \
   --camera topdown \
   --mask auto
@@ -164,7 +164,7 @@ from pathlib import Path
 from sq_partial_pc import extract_object_partial_pc
 
 payload = extract_object_partial_pc(
-    Path("datasets/sqnet_isaac/001/epi_000001"),
+    Path("datasets/supersq_grasp_data/001/epi_000001"),
     "topdown",              # or "camera_topdown"
     mask_mode="auto",       # auto | instance | mesh
     color_mode="instance",  # instance | rgb | none
@@ -181,7 +181,23 @@ colors = payload.get("colors")
 |-----------|-----|
 | Current SQ single-object data (instance mask covers full image) | `--mask auto` or `--mask mesh` |
 | Future data with proper background/object instance IDs | `--mask instance` or `--mask auto` |
-| Need reproducible object crop independent of segmentation quality | `--mask mesh` |
+| Multi-object scenes (`meta.json` → `scene_objects > 1`) | `--mask instance` or `--mask auto` (never `--mask mesh`) |
+| Need reproducible object crop independent of segmentation quality | `--mask mesh` (single-object only) |
+
+### Multi-object occlusion scenes
+
+When collecting with `--scene_objects 2` (or higher), distractor objects can occlude the target in depth and instance segmentation. Extraction uses the **target object instance label** only (`meta["object_id"]` / `meta["target_object_id"]`), so occluded target regions are naturally absent from `partial_pc`.
+
+Saved payloads also include:
+
+| Key | Description |
+|-----|-------------|
+| `occlusion_mode` | `single_object` or `multi_object` |
+| `scene_object_ids` | All object IDs on the table |
+| `distractor_ids` | Non-target scene objects |
+| `visible_target_fraction` | Target instance pixels / valid depth pixels |
+
+`mask=auto` skips the mesh-bbox fallback on multi-object samples because occluder points can fall inside the target mesh bounding box.
 
 ---
 
@@ -189,7 +205,11 @@ colors = payload.get("colors")
 
 **`mask=instance found zero object pixels`**
 
-The instance label for your object is missing. Use `--mask auto` or `--mask mesh`.
+The instance label for your object is missing. Use `--mask auto` or `--mask mesh` (single-object only).
+
+**`mask=mesh is unsafe for multi-object scenes`**
+
+Re-collect with `--scene_objects 1`, or re-extract with `--mask instance` or `--mask auto`.
 
 **All points have the same instance color**
 

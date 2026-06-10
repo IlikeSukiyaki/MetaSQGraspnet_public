@@ -9,6 +9,9 @@ models_ifl.zip
 # --- MetaIsaacGrasp generated / collected data ---
 metagrasp/MetaIsaacGrasp/datasets/*
 !metagrasp/MetaIsaacGrasp/datasets/README.md
+# Uncomment when ready to track the lite demo dataset:
+# !metagrasp/MetaIsaacGrasp/datasets/supersq_grasp_data/demo/
+# !metagrasp/MetaIsaacGrasp/datasets/supersq_grasp_data/demo/**
 metagrasp/MetaIsaacGrasp/models/models_ifl
 metagrasp/MetaIsaacGrasp/models/dataset_real/
 metagrasp/MetaIsaacGrasp/data/

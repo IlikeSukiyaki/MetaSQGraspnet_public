@@ -101,8 +101,7 @@ obj_exclude = ["033"]
 test_obj = False
 
 ################# PATH CONFIG #################
-HOME_PATH =  "omniverse://nucleus.ifl.kit.edu/Users/yitian/" # 
-#HOME_PATH = Path(os.getcwd())
+HOME_PATH = Path(os.getcwd())
 
 nums = [f"{i:03}" for i in range(0, 83)]
 for i in obj_exclude:
@@ -118,7 +117,17 @@ for i in obj_exclude:
 
     
 MODEL_PATH = os.path.join(HOME_PATH, "models", "models_ifl") # path to the models
-MGN_PATHS = [os.path.join(MODEL_PATH, a, "orbit_obj.usd") for a in nums] # path to the objects
+MGN_PATHS = [
+    os.path.join(MODEL_PATH, obj_id, "orbit_obj.usd")
+    for obj_id in nums
+    if os.path.exists(os.path.join(MODEL_PATH, obj_id, "orbit_obj.usd"))
+]
+if not MGN_PATHS:
+    raise FileNotFoundError(
+        "No physics-ready orbit_obj.usd found under "
+        f"{MODEL_PATH}. Convert objects first, e.g.\n"
+        "  python urdf_converter.py --input models/models_ifl/001/textured.urdf --headless"
+    )
  
 CORNER_PATHS = [os.path.join(HOME_PATH, "models/obj.usd")] # path to the corner marker squares
 # MGN_PATHS_URDF = [os.path.join(MODEL_PATH, a, "textured.urdf") for a in nums] # path to the objects in urdf format

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+# Verified smoke-test object IDs shared across grasp and data-collection tasks.
+DEMO_OBJ_IDS = ["000", "001", "004", "011"]
+
 
 def repo_root() -> Path:
     return Path(__file__).resolve().parents[1]

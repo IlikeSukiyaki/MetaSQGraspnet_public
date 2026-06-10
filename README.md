@@ -106,7 +106,7 @@ Created at runtime when collecting data. Example SQNet collection:
 cd metagrasp/MetaIsaacGrasp
 conda activate env_isaaclab
 python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras \
-  --save_camera_data --output_dir datasets/sqnet_isaac --max_episodes 100
+  --save_camera_data --output_dir datasets/supersq_grasp_data --max_episodes 100
 ```
 
 Output layout is documented in `metagrasp/MetaIsaacGrasp/README.md` and `metagrasp/MetaIsaacGrasp/datasets/README.md`.
@@ -115,7 +115,7 @@ Output layout is documented in `metagrasp/MetaIsaacGrasp/README.md` and `metagra
 
 | Path | Purpose | Source |
 |------|---------|--------|
-| `rgbsq_grasp/datasets/` | Training, evaluation, and Isaac-synth `.npy` samples | [DSQNet Google Drive datasets](https://drive.google.com/drive/folders/1PQ9dSeD0WmdESQemsnM1SPmpPDChQ95s) or convert from `datasets/sqnet_isaac` via `tools/convert_sq_to_npy.py` |
+| `rgbsq_grasp/datasets/` | Training, evaluation, and Isaac-synth `.npy` samples | [DSQNet Google Drive datasets](https://drive.google.com/drive/folders/1PQ9dSeD0WmdESQemsnM1SPmpPDChQ95s) or convert from `datasets/supersq_grasp_data` via `tools/convert_sq_to_npy.py` |
 | `rgbsq_grasp/pretrained/` | DSQNet checkpoints | [Pretrained models Drive folder](https://drive.google.com/drive/folders/1PN7DF0iNL60iOuyA-QS2g7jMzXSOPD6a) |
 | `rgbsq_grasp/train_results/` | Training outputs | Created by `train.py` |
 
@@ -148,7 +148,7 @@ Requires `models_ifl/001/{textured.obj, textured.obj.hdf5, orbit_obj.usd}`.
 # 1) Collect in Isaac (see section 3)
 # 2) Convert to .npy
 python tools/convert_sq_to_npy.py \
-  --input datasets/sqnet_isaac/001 \
+  --input datasets/supersq_grasp_data/001 \
   --output ../../rgbsq_grasp/datasets/isaac_synth/001 \
   --camera both
 
