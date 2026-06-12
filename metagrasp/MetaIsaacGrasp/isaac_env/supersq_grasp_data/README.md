@@ -239,16 +239,27 @@ Or collect the full demo set in one script:
 bash tools/collect_demo_dataset.sh datasets/supersq_grasp_data/demo
 ```
 
-Multi-object occlusion test (2 objects on table, 1 target + 1 distractor):
+Multi-object scenes (2–4 objects on table, random target + distractors):
 
 ```bash
+# Lite export: smaller bundles, auto-saved target partial_pc
 python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras --headless \
   --save_camera_data --export_profile lite \
   --obj_ids 000,001,004,011 \
   --scene_objects 2 \
   --output_dir datasets/supersq_grasp_data/multi_obj \
   --max_episodes 20
+
+# Full export: per-object partial PC re-extraction + visualization
+python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras --headless \
+  --save_camera_data --export_profile full \
+  --obj_ids 000,001,004,011 \
+  --scene_objects 4 \
+  --output_dir datasets/supersq_grasp_data/multi_obj_full \
+  --max_episodes 1
 ```
+
+See [`docs/multi_object_data_collection.md`](../../docs/multi_object_data_collection.md) for the full workflow, `meta.json` fields, and `tools/visualize_partial_pc.py` usage.
 
 ### CLI flags (via `run.py`)
 
@@ -280,8 +291,9 @@ These live outside `supersq_grasp_data/` but consume its output:
 | `tools/extract_partial_pc.py` | Extract object-only partial point clouds (`--mask`, `--color`) |
 | `tools/convert_sq_to_npy.py` | Convert raw samples to `rgbsq_grasp` `.npy` format |
 | `tools/inspect_sq_sample.py` | Inspect depth/seg/pcd of one sample |
+| `tools/visualize_partial_pc.py` | Open3D viewer for target or all scene-object partial PCs |
 
-See also: [`docs/partial_pc_extraction.md`](../../docs/partial_pc_extraction.md)
+See also: [`docs/multi_object_data_collection.md`](../../docs/multi_object_data_collection.md), [`docs/partial_pc_extraction.md`](../../docs/partial_pc_extraction.md)
 
 ---
 

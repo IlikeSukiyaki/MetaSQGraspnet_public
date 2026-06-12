@@ -1,0 +1,106 @@
+data:
+  test:
+    batch_size: 16
+    csv_name: test_datalist.csv
+    loader: primitive
+    noise_augment: true
+    noise_std: 0.001
+    num_gt_points: 1500
+    num_points: 1500
+    num_sampled_points: 300
+    num_workers: 8
+    object_types:
+    - box
+    - cone
+    - cylinder
+    - truncated_cone
+    - ellipsoid
+    - truncated_torus
+    path: datasets/primitive_dataset
+  training:
+    batch_size: 16
+    csv_name: train_datalist.csv
+    loader: primitive
+    noise_augment: true
+    noise_std: 0.001
+    num_gt_points: 1500
+    num_points: 1500
+    num_sampled_points: 300
+    num_workers: 8
+    object_types:
+    - box
+    - cone
+    - cylinder
+    - truncated_cone
+    - ellipsoid
+    - truncated_torus
+    path: datasets/primitive_dataset
+  validation:
+    batch_size: 16
+    csv_name: validation_datalist.csv
+    loader: primitive
+    noise_augment: true
+    noise_std: 0.001
+    num_gt_points: 1500
+    num_points: 1500
+    num_sampled_points: 300
+    num_workers: 8
+    object_types:
+    - box
+    - cone
+    - cylinder
+    - truncated_cone
+    - ellipsoid
+    - truncated_torus
+    path: datasets/primitive_dataset
+device: cuda:1
+model:
+  arch: sqnet
+  backbone:
+    arch: dgcnn
+    global_feature_dim: 1024
+    input_dim: 3
+    k: 20
+    l_hidden_local:
+    - 64
+    - 64
+    - 128
+    - 256
+    leakyrelu_slope: 0.2
+    use_batch_norm: false
+    use_mean_global_feature: false
+    use_spatial_transform: false
+  orientation:
+    l_hidden:
+    - 512
+    - 256
+    output_dim: 4
+  position:
+    l_hidden:
+    - 512
+    - 256
+    output_dim: 3
+  shape:
+    l_hidden:
+    - 512
+    - 256
+    output_dim: 2
+  size:
+    l_hidden:
+    - 512
+    - 256
+    output_dim: 3
+trainer: recognition
+training:
+  loss:
+    type: sq_loss
+    weight: 0.01
+  n_epoch: 1000
+  optimizer:
+    lr: 0.001
+    name: adam
+  print_interval: 100
+  save_interval: 10000
+  val_interval: 5000
+  visualize_interval: 10000
+  visualize_number: 3

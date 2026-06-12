@@ -34,6 +34,36 @@ conda activate env_isaaclab
 bash tools/collect_demo_dataset.sh datasets/supersq_grasp_data/demo
 ```
 
+## Multi-object scenes
+
+Collect cluttered-table episodes with `--scene_objects` (2–4 objects from the pool) and visualize all object partial PCs with `tools/visualize_partial_pc.py`.
+
+Full guide: [`docs/multi_object_data_collection.md`](../docs/multi_object_data_collection.md)
+
+```bash
+# 4 objects on table, full export (per-object visualization)
+python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras --headless \
+  --save_camera_data --export_profile full \
+  --obj_ids 000,001,004,011 --scene_objects 4 \
+  --output_dir datasets/supersq_grasp_data/multi_obj_full \
+  --max_episodes 1 --topdown_height 2.1
+
+conda activate metagrasp
+python tools/visualize_partial_pc.py \
+  --sample datasets/supersq_grasp_data/multi_obj_full/011/epi_000000 \
+  --source extract --objects all --camera topdown
+```
+
+Lite multi-object collection (target partial PC only, smaller files):
+
+```bash
+python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras --headless \
+  --save_camera_data --export_profile lite \
+  --obj_ids 000,001,004,011 --scene_objects 2 \
+  --output_dir datasets/supersq_grasp_data/multi_obj \
+  --max_episodes 20
+```
+
 ## Full collection
 
 ```bash
@@ -68,15 +98,12 @@ python tools/convert_sq_to_npy.py \
   --camera both
 ```
 
-## Git tracking the demo folder (when ready to push)
+## Git-tracked demo sample
 
-Add to the repo root [`.gitignore`](../../.gitignore):
+One curated multi-object episode is whitelisted in the repo root [`.gitignore`](../../.gitignore):
 
-```gitignore
-!metagrasp/MetaIsaacGrasp/datasets/supersq_grasp_data/demo/
-!metagrasp/MetaIsaacGrasp/datasets/supersq_grasp_data/demo/**
-```
+`supersq_grasp_data/multi_obj_full/011/epi_000000/` (~46 MB, 4-object cluttered table, full export).
 
-Object meshes and USD assets remain under `UR_grasp_database/` (tracked separately).
+All other collected data stays local. Object meshes and USD assets remain under `UR_grasp_database/` (tracked separately).
 
 See `metagrasp/MetaIsaacGrasp/README.md` and the root `README.md` for full documentation.
