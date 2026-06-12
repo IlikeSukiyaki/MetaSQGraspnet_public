@@ -9,9 +9,15 @@ models_ifl.zip
 # --- MetaIsaacGrasp generated / collected data ---
 metagrasp/MetaIsaacGrasp/datasets/*
 !metagrasp/MetaIsaacGrasp/datasets/README.md
-# Uncomment when ready to track the lite demo dataset:
-# !metagrasp/MetaIsaacGrasp/datasets/supersq_grasp_data/demo/
-# !metagrasp/MetaIsaacGrasp/datasets/supersq_grasp_data/demo/**
+# Curated demo episode (multi-object full export, ~46 MB)
+!metagrasp/MetaIsaacGrasp/datasets/supersq_grasp_data/
+metagrasp/MetaIsaacGrasp/datasets/supersq_grasp_data/*
+!metagrasp/MetaIsaacGrasp/datasets/supersq_grasp_data/multi_obj_full/
+metagrasp/MetaIsaacGrasp/datasets/supersq_grasp_data/multi_obj_full/*
+!metagrasp/MetaIsaacGrasp/datasets/supersq_grasp_data/multi_obj_full/011/
+metagrasp/MetaIsaacGrasp/datasets/supersq_grasp_data/multi_obj_full/011/*
+!metagrasp/MetaIsaacGrasp/datasets/supersq_grasp_data/multi_obj_full/011/epi_000000/
+!metagrasp/MetaIsaacGrasp/datasets/supersq_grasp_data/multi_obj_full/011/epi_000000/**
 metagrasp/MetaIsaacGrasp/models/models_ifl
 metagrasp/MetaIsaacGrasp/models/dataset_real/
 metagrasp/MetaIsaacGrasp/data/
@@ -33,6 +39,7 @@ rgbsq_grasp/temp/
 *.pth
 *.pt
 *.ckpt
+!metagrasp/MetaIsaacGrasp/datasets/supersq_grasp_data/multi_obj_full/011/epi_000000/scene.pt
 __pycache__/
 *.py[cod]
 *.pyo

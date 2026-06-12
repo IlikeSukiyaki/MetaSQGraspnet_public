@@ -128,7 +128,7 @@ if not MGN_PATHS:
         f"{MODEL_PATH}. Convert objects first, e.g.\n"
         "  python urdf_converter.py --input models/models_ifl/001/textured.urdf --headless"
     )
- 
+
 CORNER_PATHS = [os.path.join(HOME_PATH, "models/obj.usd")] # path to the corner marker squares
 # MGN_PATHS_URDF = [os.path.join(MODEL_PATH, a, "textured.urdf") for a in nums] # path to the objects in urdf format
 

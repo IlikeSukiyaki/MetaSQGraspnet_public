@@ -39,7 +39,9 @@ python tools/extract_partial_pc.py \
   --camera both --mask auto --color instance
 
 
-# Multi-object occlusion data collection (2 objects on table from 4-object pool)
+# Multi-object data collection (see docs/multi_object_data_collection.md)
+
+# Lite: 2 objects on table, target partial_pc only
 python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras --headless \
   --save_camera_data --export_profile lite \
   --obj_ids 000,001,004,011 \
@@ -47,13 +49,25 @@ python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras --headless \
   --output_dir datasets/supersq_grasp_data/multi_obj \
   --max_episodes 20
 
+# Full: 4 objects on table, enables per-object partial_pc visualization
+python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras --headless \
+  --save_camera_data --export_profile full \
+  --obj_ids 000,001,004,011 \
+  --scene_objects 4 \
+  --output_dir datasets/supersq_grasp_data/multi_obj_full \
+  --max_episodes 1 \
+  --topdown_height 2.1
+
 python tools/inspect_sq_sample.py \
   --sample datasets/supersq_grasp_data/multi_obj/001/epi_000000 \
-  --camera camera_topdown
+  --camera camera_topdown --show_images
 
-python tools/extract_partial_pc.py \
-  --sample datasets/supersq_grasp_data/multi_obj/001/epi_000000 \
-  --camera topdown --mask auto --color instance --show
+python tools/visualize_partial_pc.py \
+  --sample datasets/supersq_grasp_data/multi_obj/000/epi_000009
+
+python tools/visualize_partial_pc.py \
+  --sample datasets/supersq_grasp_data/multi_obj_full/011/epi_000000 \
+  --source extract --objects all --camera topdown
 
 
 # Classical antipodal grasp smoke task (object-v0-Classical)
