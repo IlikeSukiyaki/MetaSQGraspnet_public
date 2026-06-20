@@ -1,0 +1,8 @@
+train_results/
+wandb/
+datasets/**
+!datasets/**/
+!datasets/**/dataset_manifest.json
+!datasets/**/*_class_map.json
+__pycache__/
+*.pyc

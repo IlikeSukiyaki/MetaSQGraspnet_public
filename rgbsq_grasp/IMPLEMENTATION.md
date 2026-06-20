@@ -5,12 +5,13 @@ This folder is the migrated working copy of `DSQNet-public`. The reference folde
 ## What Was Implemented
 
 - Copied the DSQNet source layout into `/home/sustech/桌面/DSQNet/rgbsq_grasp` while preserving the existing `datasets/` directory.
-- Updated training/evaluation code to use `torch.utils.tensorboard.SummaryWriter` instead of `tensorboardX`.
+- Migrated training logging from TensorBoard to Weights & Biases via `utils/training_logger.py`.
 - Added safer device handling so `--device cpu` works and CUDA seed calls are skipped when CUDA is unavailable.
 - Added checkpoint loading compatibility for newer PyTorch versions through `models.safe_torch_load()`.
 - Added clearer missing-checkpoint errors for `evaluation.py` and pretrained model loading.
 - Fixed a Python comparison issue in `trainers/recognition_trainer.py`.
 - Added `inference.py`, a lightweight inference helper intended for later IsaacLab use. It loads SQNet/DSQNet checkpoints and predicts raw primitive parameters from point cloud arrays/tensors without importing Open3D visualization paths.
+- Added `supersq_inference.py` for SQNet-only superquadric fitting and Open3D visualization on a single partial point cloud (no SegNet required). Prefer this over `evaluation.py` when checking a trained SQNet checkpoint.
 - Updated `requirements.txt` to use modern package names such as `scikit-learn` instead of deprecated `sklearn`.
 - Added `environment.yml` documenting the Python 3.10 environment target.
 
@@ -80,7 +81,7 @@ import omegaconf
 import pandas
 import sklearn
 import scipy
-from torch.utils.tensorboard import SummaryWriter
+import wandb
 print("imports ok")
 PY
 ```
@@ -121,13 +122,15 @@ print("partial pc shape:", tuple(batch[0].shape))
 PY
 ```
 
-Start SQNet training:
+Start SQNet training (logs to W&B; use offline mode on headless machines):
 
 ```bash
-python train.py --config configs/sqnet_config.yml --device 0
+python train.py --config configs/sqnet_config.yml --device 0 --run sqnet_baseline
+# or:
+WANDB_MODE=offline python train.py --config configs/sqnet_config_smoke.yml --device 0 --run wandb_smoke
 ```
 
-This is the full training command from the original project and may run for a long time.
+The full `sqnet_config.yml` run may take a long time. Checkpoints are saved under `train_results/`.
 
 Evaluation requires pretrained checkpoints in:
 
@@ -154,6 +157,82 @@ Evaluation opens Open3D viewer windows. By default (`--viz-mode both`), each vie
 4. SQNet vs GT wireframe overlay (GT edges + solid prediction in the same pose)
 
 Use `--viz-mode legacy` for the old opaque overlap view, or `--viz-mode minimal` for only the three standalone views. Use `--no-visualize` on headless machines.
+
+### SQNet quick visualization (`supersq_inference.py`)
+
+Recommended way to inspect a trained SQNet checkpoint on one partial point cloud. Unlike `evaluation.py`, this script does **not** require SegNet or DSQNet — it loads SQNet directly and opens a single Open3D window showing the input point cloud plus the fitted superquadric mesh (solid + wireframe).
+
+Run from `rgbsq_grasp` with a display attached:
+
+```bash
+cd /home/sustech/桌面/DSQNet/rgbsq_grasp
+conda activate rgbsq_grasp
+
+python supersq_inference.py \
+  --object box \
+  --index 0 \
+  --device 0 \
+  --config train_results/sqnet_config/sqnet_full/sqnet_config.yml \
+  --checkpoint train_results/sqnet_config/sqnet_full/model_best.pkl \
+  --visualize
+```
+
+Use any checkpoint from the same run (`model_best.pkl`, `model_iter_420000.pkl`, etc.) as long as the matching config YAML is passed to `--config`.
+
+**Arguments:**
+
+| Flag | Description |
+|------|-------------|
+| `--object` | Evaluation object class (`box`, `cylinder`, `cone`, …) |
+| `--index` | Sample index `0`–`9` (loads `{object}_{index+90:04}_viewpoint_XX.npy`) |
+| `--viewpoint` | Optional viewpoint `1`–`14` (default: first file found) |
+| `--segment-id` | Optional GT membership label to extract one primitive patch |
+| `--config` | SQNet config YAML (use the copy saved under `train_results/…/`) |
+| `--checkpoint` | SQNet `.pkl` checkpoint |
+| `--device` | GPU index (`0`), `cuda:0`, or `cpu` |
+| `--visualize` | Open Open3D viewer (partial cloud + fitted superquadric) |
+| `--no-visualize` | Print parameters only |
+| `--output` | Optional path to save predicted parameters as JSON |
+| `--input` | Alternative to `--object`: path to a `.npy` point cloud file |
+
+**Example — evaluation sample with a specific checkpoint:**
+
+```bash
+python supersq_inference.py \
+  --object box \
+  --index 0 \
+  --device 0 \
+  --config train_results/sqnet_config/sqnet_full/sqnet_config.yml \
+  --checkpoint train_results/sqnet_config/sqnet_full/model_iter_420000.pkl \
+  --visualize
+```
+
+**Example — custom `.npy` input:**
+
+```bash
+python supersq_inference.py \
+  --input datasets/evaluation_dataset/box/box_0090_viewpoint_01.npy \
+  --config train_results/sqnet_config/sqnet_full/sqnet_config.yml \
+  --checkpoint train_results/sqnet_config/sqnet_full/model_best.pkl \
+  --visualize
+```
+
+**Example — headless parameter dump (no GUI):**
+
+```bash
+python supersq_inference.py \
+  --object cylinder \
+  --index 3 \
+  --device 0 \
+  --config train_results/sqnet_config/sqnet_full/sqnet_config.yml \
+  --checkpoint train_results/sqnet_config/sqnet_full/model_best.pkl \
+  --no-visualize \
+  --output results/cylinder_3_sqnet.json
+```
+
+Terminal output includes predicted superquadric parameters (`a1`, `a2`, `a3`, `e1`, `e2`). With `--visualize`, Open3D shows the gray partial point cloud, orange fitted mesh, and blue wireframe overlay in one window.
+
+Default pretrained paths (when `--config` / `--checkpoint` are omitted) are `pretrained/sqnet_config/example/sqnet_config.yml` and `model_best.pkl`.
 
 ## IsaacLab Notes
 

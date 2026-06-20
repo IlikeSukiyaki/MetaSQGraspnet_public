@@ -7,3 +7,4 @@ datasets/
 train_results/
 pretrained/
 temp/
+wandb/

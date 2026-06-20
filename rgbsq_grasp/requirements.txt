@@ -1,4 +1,4 @@
-tensorboard
+wandb
 six
 omegaconf
 scikit-learn

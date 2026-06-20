@@ -5,7 +5,6 @@ from datetime import datetime
 
 import numpy as np
 import torch
-from torch.utils.tensorboard import SummaryWriter
 from omegaconf import OmegaConf
 
 from loader import get_dataloader
@@ -13,9 +12,10 @@ from models import get_model
 from optimizers import get_optimizer
 from trainers import get_trainer
 from utils import save_yaml
+from utils.training_logger import WandbTrainingLogger
 
 
-def run(cfg, writer):
+def run(cfg, logger):
 
     # Setup seeds
     seed = cfg.get("seed", 1)
@@ -49,7 +49,7 @@ def run(cfg, writer):
         model,
         optimizer,
         dataloaders,
-        writer=writer,
+        logger=logger,
     )
 
 if __name__ == "__main__":
@@ -58,6 +58,13 @@ if __name__ == "__main__":
     parser.add_argument("--device", default=0)
     parser.add_argument("--logdir", default="train_results/")
     parser.add_argument("--run", default=None)
+    parser.add_argument("--wandb-project", default="rgbsq_grasp")
+    parser.add_argument("--wandb-entity", default=None)
+    parser.add_argument(
+        "--wandb-tags",
+        default=None,
+        help="Comma-separated W&B tags (e.g. sqnet,smoke)",
+    )
     args = parser.parse_args()
 
     cfg = OmegaConf.load(args.config)
@@ -73,12 +80,27 @@ if __name__ == "__main__":
 
     config_basename = os.path.basename(args.config).split(".")[0]
     logdir = os.path.join(args.logdir, config_basename, str(run_id))
-    writer = SummaryWriter(log_dir=logdir)
     print("Result directory: {}".format(logdir))
 
     # copy config file
     copied_yml = os.path.join(logdir, os.path.basename(args.config))
+    os.makedirs(logdir, exist_ok=True)
     save_yaml(copied_yml, OmegaConf.to_yaml(cfg))
     print(f"config saved as {copied_yml}")
 
-    run(cfg, writer)
+    wandb_tags = None
+    if args.wandb_tags:
+        wandb_tags = [tag.strip() for tag in args.wandb_tags.split(",") if tag.strip()]
+
+    logger = WandbTrainingLogger(
+        log_dir=logdir,
+        project=args.wandb_project,
+        entity=args.wandb_entity,
+        run_name=run_id,
+        config=OmegaConf.to_container(cfg, resolve=True),
+        tags=wandb_tags,
+    )
+    try:
+        run(cfg, logger)
+    finally:
+        logger.finish()

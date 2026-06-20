@@ -1,6 +1,6 @@
 # Superquadrics MetaGrasp
 
-Integration of **MetaIsaacGrasp** (Isaac Lab grasp simulation) with **DSQNet / rgbsq_grasp** (deformable superquadric shape estimation) for classical antipodal grasping, synthetic data collection, and superquadric-based grasp pose generation.
+Integration of **MetaSQGrasp** (Isaac Lab grasp simulation) with **DSQNet / rgbsq_grasp** (deformable superquadric shape estimation) for classical antipodal grasping, synthetic data collection, and superquadric-based grasp pose generation.
 
 Remote repository: [superquadrics_metagrasp](https://github.com/IlikeSukiyaki/superquadrics_metagrasp)
 
@@ -13,7 +13,7 @@ superquadrics_metagrasp/          # repository root (clone target)
 ├── models_ifl.zip                # [local only] optional archive of models_ifl
 ├── IsaacLab/                     # [local only] NVIDIA Isaac Lab (third-party)
 ├── metagrasp/
-│   └── MetaIsaacGrasp/           # Isaac Sim environments, grasp sampler, tools
+│   └── MetaSQGrasp/              # Isaac Sim environments, grasp sampler, tools
 │       ├── run.py                # entry point for AIR / SQ / Classical tasks
 │       ├── grasp_sampler/        # antipodal sampling + runtime collision filter
 │       ├── isaac_env/            # task packages (Classical, Grasp, SQ-v0-Data, …)
@@ -48,7 +48,7 @@ Recommended layout (sibling to this repo):
 
 Create a conda env (e.g. `env_isaaclab`) with Python 3.10+ as required by your Isaac Sim version. Point `ISAACSIM_PATH` and Isaac Lab paths in your shell profile as described in the Isaac Lab docs.
 
-This repo expects Isaac Lab to be available on `PYTHONPATH` when running `metagrasp/MetaIsaacGrasp/run.py`.
+This repo expects Isaac Lab to be available on `PYTHONPATH` when running `metagrasp/MetaSQGrasp/run.py`.
 
 ### 2. MetaGraspNet object assets (`models_ifl/`)
 
@@ -67,17 +67,17 @@ superquadrics_metagrasp/models_ifl/
 └── …
 ```
 
-Wire it into MetaIsaacGrasp:
+Wire it into MetaSQGrasp:
 
 ```bash
-cd metagrasp/MetaIsaacGrasp/models
+cd metagrasp/MetaSQGrasp/models
 ln -sfn ../../../models_ifl models_ifl
 ```
 
 For object `001`, convert URDF to simulation USD (once per object):
 
 ```bash
-cd metagrasp/MetaIsaacGrasp
+cd metagrasp/MetaSQGrasp
 conda activate env_isaaclab
 python urdf_converter.py --input ../../models_ifl/001/textured.urdf
 # creates models_ifl/001/orbit_obj.usd
@@ -96,20 +96,20 @@ python tools/generate_object_grasps.py \
 # creates models_ifl/001/textured.obj.hdf5
 ```
 
-See `metagrasp/MetaIsaacGrasp/docs/classical_grasp_sampling.md` for the full classical grasp pipeline.
+See `metagrasp/MetaSQGrasp/docs/classical_grasp_sampling.md` for the full classical grasp pipeline.
 
-### 3. MetaIsaacGrasp datasets (`metagrasp/MetaIsaacGrasp/datasets/`)
+### 3. MetaSQGrasp datasets (`metagrasp/MetaSQGrasp/datasets/`)
 
 Created at runtime when collecting data. Example SQNet collection:
 
 ```bash
-cd metagrasp/MetaIsaacGrasp
+cd metagrasp/MetaSQGrasp
 conda activate env_isaaclab
 python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras \
   --save_camera_data --output_dir datasets/supersq_grasp_data --max_episodes 100
 ```
 
-Output layout is documented in `metagrasp/MetaIsaacGrasp/README.md` and `metagrasp/MetaIsaacGrasp/datasets/README.md`.
+Output layout is documented in `metagrasp/MetaSQGrasp/README.md` and `metagrasp/MetaSQGrasp/datasets/README.md`.
 
 ### 4. rgbsq_grasp assets
 
@@ -135,7 +135,7 @@ See `rgbsq_grasp/README.md` and `rgbsq_grasp/IMPLEMENTATION.md` for details.
 ### Classical antipodal grasp (smoke test)
 
 ```bash
-cd metagrasp/MetaIsaacGrasp
+cd metagrasp/MetaSQGrasp
 conda activate env_isaaclab
 python run.py --task object-v0-Classical --num_envs 1 --enable_cameras
 ```
@@ -158,20 +158,20 @@ python supersq_inference.py \
   --input datasets/isaac_synth/001/001_0000_viewpoint_00.npy --device cpu
 ```
 
-Command cheatsheet: `metagrasp/MetaIsaacGrasp/command.txt`.
+Command cheatsheet: `metagrasp/MetaSQGrasp/command.txt`.
 
 ## Conda environments (recommended)
 
 | Env | Used for |
 |-----|----------|
-| `env_isaaclab` | Isaac Sim / MetaIsaacGrasp simulation |
+| `env_isaaclab` | Isaac Sim / MetaSQGrasp simulation |
 | `metagrasp` | Offline grasp sampling (`tools/generate_object_grasps.py`) |
 | `rgbsq_grasp` | DSQNet training and inference |
 
 ## Submodule notes
 
-This repository is a **monorepo**. It extends [MetaIsaacGrasp](https://github.com/YitianShi/MetaIsaacGrasp) with classical grasp runtime, Hand-E gripper profiles, SQ-v0-Data, and rgbsq_grasp integration. Upstream MetaIsaacGrasp history is not preserved as a separate submodule.
+This repository is a **monorepo**. **MetaSQGrasp** (`metagrasp/MetaSQGrasp/`) extends [MetaIsaacGrasp](https://github.com/YitianShi/MetaIsaacGrasp) with classical grasp runtime, Hand-E gripper profiles, SQ-v0-Data, and rgbsq_grasp integration. Upstream MetaIsaacGrasp history is not preserved as a separate submodule.
 
 ## License
 
-See `metagrasp/MetaIsaacGrasp/LICENSE` and third-party notices under `metagrasp/MetaIsaacGrasp/doc/`. rgbsq_grasp follows the original DSQNet license terms described in its README.
+See `metagrasp/MetaSQGrasp/LICENSE` and third-party notices under `metagrasp/MetaSQGrasp/doc/`. rgbsq_grasp follows the original DSQNet license terms described in its README.

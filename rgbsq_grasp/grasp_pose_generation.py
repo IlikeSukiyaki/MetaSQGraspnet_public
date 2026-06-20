@@ -6,7 +6,6 @@ import open3d as o3d
 from datetime import datetime
 from copy import deepcopy
 from sklearn.preprocessing import normalize
-from torch.utils.tensorboard import SummaryWriter
 
 from functions.pc_preprocess import process_pc, normalize_numpy_pc
 from functions.utils_numpy import quaternions_to_rotation_matrices, define_SE3, inverse_SE3
