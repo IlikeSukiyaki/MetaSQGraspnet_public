@@ -1,0 +1,14 @@
+{
+  "evaluation_001": "bottle_cone",
+  "evaluation_002": "box",
+  "evaluation_003": "cone",
+  "evaluation_004": "cup_with_lid",
+  "evaluation_005": "cylinder",
+  "evaluation_006": "dumbbell",
+  "evaluation_007": "ellipsoid",
+  "evaluation_008": "hammer_cylinder",
+  "evaluation_009": "padlock",
+  "evaluation_010": "screw_driver",
+  "evaluation_011": "truncated_cone",
+  "evaluation_012": "truncated_torus"
+}

@@ -9,7 +9,7 @@ dependencies:
   - pandas
   - scikit-learn
   - omegaconf
-  - tensorboard
+  - wandb
   - tqdm
   - pip:
       - open3d

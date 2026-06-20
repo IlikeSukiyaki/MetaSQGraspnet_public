@@ -26,9 +26,9 @@ class RecognitionTrainer:
             self.metric = get_metric(dict_metric)
             self.show_metric = True
 
-    def train(self, model, opt, d_dataloaders, writer):
+    def train(self, model, opt, d_dataloaders, logger):
         cfg = self.cfg
-        logdir = writer.log_dir
+        logdir = logger.log_dir
         best_val_loss = np.inf
         iter = 0
 
@@ -56,7 +56,7 @@ class RecognitionTrainer:
                 self.loss_meter["train"].update(train_step_result["loss"])
 
                 if iter % cfg.print_interval == 0:
-                    self.record_results(writer, iter, "train", train_step_result)
+                    self.record_results(logger, iter, "train", train_step_result)
                     print(
                         f"[Training] Iter [{iter:d}] Avg Loss: {self.loss_meter['train'].avg:.4f} Elapsed time: {self.time_meter.sum:.4f}"
                     )
@@ -85,7 +85,7 @@ class RecognitionTrainer:
                             pass
 
                     # record
-                    self.record_results(writer, iter, "val", train_step_result)
+                    self.record_results(logger, iter, "val", train_step_result)
                     val_loss = self.loss_meter["val"].avg
                     print(f"[Validation] Iter [{iter:d}] Avg Loss: {val_loss:.4f}")
 
@@ -99,9 +99,9 @@ class RecognitionTrainer:
 
         return model, best_val_loss
 
-    def record_results(self, writer, i, tag, results):
+    def record_results(self, logger, i, tag, results):
         # record loss
-        writer.add_scalar(f"loss/{tag}_loss", self.loss_meter[tag].avg, i)
+        logger.add_scalar(f"loss/{tag}_loss", self.loss_meter[tag].avg, i)
 
         # record segmentation result
         if i % self.cfg["visualize_interval"] == 0:
@@ -118,20 +118,19 @@ class RecognitionTrainer:
             mesh_gt = mesh_from_groundtruth(shape_gt)
             total_vertices, total_faces, total_colors = meshs_to_numpy(mesh_pred, mesh_gt, coordinate = True)
 
-            # write to Tensorboard
-            writer.add_mesh(
+            logger.add_mesh(
                 f"{tag} pc", 
                 vertices=pc_coordinated, 
                 colors=color_pc, 
                 global_step=i
             )
-            writer.add_mesh(
+            logger.add_mesh(
                 f"{tag} pc_gt", 
                 vertices=pc_gt_coordinated, 
                 colors=color_pc_gt, 
                 global_step=i
             )
-            writer.add_mesh(
+            logger.add_mesh(
                 f"{tag} mesh & mesh_gt", 
                 vertices=total_vertices, 
                 faces=total_faces, 
@@ -266,7 +265,7 @@ def meshs_to_numpy(mesh1, mesh2, color1 = [0, 1, 1], color2 = [0, 0, 1], coordin
         if faces.shape[0] > max_num_faces:
             max_num_faces = faces.shape[0]
 
-    # matching dimension between batches for tensorboard
+    # matching dimension between batches for batched mesh logging
     for batch in range(len(mesh1)):
         diff_num_pointclouds = max_num_pointclouds - total_pointclouds[batch].shape[0]
         diff_num_faces = max_num_faces - total_faces[batch].shape[0]

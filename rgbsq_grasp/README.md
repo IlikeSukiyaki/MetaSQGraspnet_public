@@ -18,7 +18,7 @@ The official repository for &lt;DSQNet: A Deformable Model-Based Supervised Lear
 The project codes are tested in the following environment.
 - python 3.8.13
 - pytorch 1.12.0
-- tensorboard 2.9.1
+- wandb
 - pandas
 - scikit-learn
 - Open3D
@@ -81,17 +81,36 @@ The training script is `train.py`.
 - `--logdir` specifies a directory where the results will be saved.
 - `--run` specifies a name for an experiment.
 - `--device` specifies an GPU number to use.
+- `--wandb-project` specifies the W&B project name (default: `rgbsq_grasp`).
+- `--wandb-entity` optionally specifies the W&B entity/team.
+- `--wandb-tags` optionally specifies comma-separated W&B tags.
 
 Training DSQNet (or SQNet) and segmentation network:
 ```
 python train.py --config configs/{X}_config.yml
 ```
 - `X` is either `sqnet`, `dsqnet` or `segnet`.
-- If you want to see the results of the intermediate training process in tensorboard, run this code:
-  ```
-  tensorboard --logdir train_results/{X}_config --host {ip address}
-  ```
-  , where `--logdir` specifies the directory where the results is saved, and the code is an example with the default setting.
+- Training metrics and 3D visualizations are logged to [Weights & Biases](https://wandb.ai). Log in once with `wandb login`, then open your run on the W&B dashboard.
+- For headless/offline use: `WANDB_MODE=offline python train.py --config configs/{X}_config.yml`
+- Checkpoints and config copies are still saved under `train_results/{X}_config/{run}/`.
+
+### SQNet quick visualization
+For inspecting a trained SQNet checkpoint on one partial point cloud (no SegNet required), use `supersq_inference.py`:
+
+```
+python supersq_inference.py \
+  --object box \
+  --index 0 \
+  --device 0 \
+  --config train_results/sqnet_config/{run}/sqnet_config.yml \
+  --checkpoint train_results/sqnet_config/{run}/model_best.pkl \
+  --visualize
+```
+
+- `--object` and `--index` load a sample from `datasets/evaluation_dataset/` (same object names as evaluation below).
+- `--config` and `--checkpoint` point to your trained run under `train_results/`, or omit both to use `pretrained/sqnet_config/example/`.
+- `--visualize` opens one Open3D window: partial point cloud + fitted superquadric mesh.
+- See `IMPLEMENTATION.md` for more examples (`--input`, `--output`, `--viewpoint`, `--segment-id`).
 
 ### Evaluation
 The evaluation script is `evaluation.py`. 
@@ -107,10 +126,7 @@ python evaluation.py --object {X} --index {Y}
 ```
 - `X` is either `box`, `cylinder`, `cone`, `ellipsoid`, `truncated_cone`, `truncated_torus`, `hammer_cylinder`, `screw_driver`, `padlock`, `cup_with_lid`, `dumbbell`, or `bottle_cone`.
 - `Y` is an integer between `0` and `9`.
-- If you want to see the results, run this code:
-  ```
-  tensorboard --logdir evaluation_results/tensorboard --host {ip address}
-  ```
+- Evaluation opens Open3D viewer windows on your display (use `--no-visualize` on headless servers).
 > **Warning:** The option `--iou` also does not work in server. If you want to measure IoU in server, try [Open3D headless rendering](http://www.open3d.org/docs/latest/tutorial/Advanced/headless_rendering.html).
 
 ### Grasp Pose Generation

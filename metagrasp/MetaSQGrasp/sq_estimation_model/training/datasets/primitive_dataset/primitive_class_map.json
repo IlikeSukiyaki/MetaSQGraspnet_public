@@ -1,0 +1,8 @@
+{
+  "primitive_001": "box",
+  "primitive_002": "cone",
+  "primitive_003": "cylinder",
+  "primitive_004": "ellipsoid",
+  "primitive_005": "truncated_cone",
+  "primitive_006": "truncated_torus"
+}

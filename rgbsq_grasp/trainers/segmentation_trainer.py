@@ -24,9 +24,9 @@ class SegmentationTrainer:
             self.metric = get_metric(dict_metric)
             self.show_metric = True
 
-    def train(self, model, opt, dataloaders, writer):
+    def train(self, model, opt, dataloaders, logger):
         cfg = self.cfg
-        logdir = writer.log_dir
+        logdir = logger.log_dir
         best_val_loss = np.inf
         iter = 0
 
@@ -54,7 +54,7 @@ class SegmentationTrainer:
 
                 # record
                 if iter % cfg.print_interval == 0:
-                    self.record_results(writer, iter, "train", train_step_result)
+                    self.record_results(logger, iter, "train", train_step_result)
                     print(
                         f"[Training] Iter [{iter:d}] Avg Loss: {self.loss_meter['train'].avg:.4f} Elapsed time: {self.time_meter.sum:.4f}"
                     )
@@ -81,7 +81,7 @@ class SegmentationTrainer:
                         )
 
                     # record
-                    self.record_results(writer, iter, "val", train_step_result)
+                    self.record_results(logger, iter, "val", train_step_result)
                     val_loss = self.loss_meter["val"].avg
                     print(f"[Validation] Iter [{iter:d}] Avg Loss: {val_loss:.4f}")
 
@@ -95,9 +95,9 @@ class SegmentationTrainer:
 
         return model, best_val_loss
 
-    def record_results(self, writer, i, tag, results):
+    def record_results(self, logger, i, tag, results):
         # record loss
-        writer.add_scalar(f"loss/{tag}_loss", self.loss_meter[tag].avg, i)
+        logger.add_scalar(f"loss/{tag}_loss", self.loss_meter[tag].avg, i)
 
         # record segmentation result
         if i % self.cfg["visualize_interval"] == 0:
@@ -108,10 +108,10 @@ class SegmentationTrainer:
             pc_gt_colors = color_pc_segmentation(pc, gt)
             pc_pred_colors = color_pc_segmentation(pc, pred)
 
-            writer.add_mesh(
+            logger.add_mesh(
                 f"{tag} gt", vertices=pc, colors=pc_gt_colors, global_step=i
             )
-            writer.add_mesh(
+            logger.add_mesh(
                 f"{tag} pred", vertices=pc, colors=pc_pred_colors, global_step=i
             )
 
@@ -120,7 +120,7 @@ class SegmentationTrainer:
             scores = self.metric.get_scores()
             self.metric.reset()
             for key, score in scores.items():
-                writer.add_scalar(f"metrics/{tag}_{key.replace(' ', '_')}", score, i)
+                logger.add_scalar(f"metrics/{tag}_{key.replace(' ', '_')}", score, i)
 
     def save_model(self, model, logdir, best=False, i_iter=None, epoch=None):
         if best:

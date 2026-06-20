@@ -1,0 +1,14 @@
+{
+  "object_001": "bottle_cone",
+  "object_002": "box",
+  "object_003": "cone",
+  "object_004": "cup_with_lid",
+  "object_005": "cylinder",
+  "object_006": "dumbbell",
+  "object_007": "ellipsoid",
+  "object_008": "hammer_cylinder",
+  "object_009": "padlock",
+  "object_010": "screw_driver",
+  "object_011": "truncated_cone",
+  "object_012": "truncated_torus"
+}
