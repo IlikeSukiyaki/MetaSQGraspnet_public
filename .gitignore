@@ -6,18 +6,12 @@ models_ifl/*
 !models_ifl/README.md
 models_ifl.zip
 
-# --- MetaSQGrasp generated / collected data ---
+# --- MetaSQGrasp generated / collected data (local only; see datasets/README.md) ---
 metagrasp/MetaSQGrasp/datasets/*
 !metagrasp/MetaSQGrasp/datasets/README.md
-# Curated demo episode (multi-object full export, ~46 MB)
 !metagrasp/MetaSQGrasp/datasets/supersq_grasp_data/
 metagrasp/MetaSQGrasp/datasets/supersq_grasp_data/*
-!metagrasp/MetaSQGrasp/datasets/supersq_grasp_data/multi_obj_full/
-metagrasp/MetaSQGrasp/datasets/supersq_grasp_data/multi_obj_full/*
-!metagrasp/MetaSQGrasp/datasets/supersq_grasp_data/multi_obj_full/011/
-metagrasp/MetaSQGrasp/datasets/supersq_grasp_data/multi_obj_full/011/*
-!metagrasp/MetaSQGrasp/datasets/supersq_grasp_data/multi_obj_full/011/epi_000000/
-!metagrasp/MetaSQGrasp/datasets/supersq_grasp_data/multi_obj_full/011/epi_000000/**
+!metagrasp/MetaSQGrasp/datasets/supersq_grasp_data/.gitkeep
 metagrasp/MetaSQGrasp/models/models_ifl
 metagrasp/MetaSQGrasp/models/dataset_real/
 metagrasp/MetaSQGrasp/data/
@@ -30,15 +24,34 @@ metagrasp/MetaSQGrasp/.algorithms/
 # --- MetaSQGrasp SQ estimation training data (large; regenerate via migrate_datasets.py) ---
 metagrasp/MetaSQGrasp/sq_estimation_model/training/datasets/**
 !metagrasp/MetaSQGrasp/sq_estimation_model/training/datasets/**/
+!metagrasp/MetaSQGrasp/sq_estimation_model/training/datasets/README.md
 !metagrasp/MetaSQGrasp/sq_estimation_model/training/datasets/**/dataset_manifest.json
 !metagrasp/MetaSQGrasp/sq_estimation_model/training/datasets/**/*_class_map.json
-metagrasp/MetaSQGrasp/sq_estimation_model/training/train_results/
+!metagrasp/MetaSQGrasp/sq_estimation_model/training/datasets/**/generation_config.json
+!metagrasp/MetaSQGrasp/sq_estimation_model/training/datasets/**/instance_manifest.csv
+metagrasp/MetaSQGrasp/sq_estimation_model/training/train_results/*
+!metagrasp/MetaSQGrasp/sq_estimation_model/training/train_results/README.md
+metagrasp/MetaSQGrasp/sq_estimation_model/training/eval_results/*
+!metagrasp/MetaSQGrasp/sq_estimation_model/training/eval_results/README.md
+
+# --- MetaSQGrasp SQ estimation checkpoints (configs only in git) ---
+metagrasp/MetaSQGrasp/sq_estimation_model/pretrained/**
+!metagrasp/MetaSQGrasp/sq_estimation_model/pretrained/**/
+!metagrasp/MetaSQGrasp/sq_estimation_model/pretrained/README.md
+!metagrasp/MetaSQGrasp/sq_estimation_model/pretrained/**/*.yml
 
 # --- rgbsq_grasp datasets and training artifacts ---
 rgbsq_grasp/datasets/*
 !rgbsq_grasp/datasets/README.md
-rgbsq_grasp/train_results/
-rgbsq_grasp/pretrained/
+!rgbsq_grasp/datasets/**/.gitkeep
+rgbsq_grasp/train_results/*
+!rgbsq_grasp/train_results/README.md
+rgbsq_grasp/train_results_tensorboard/*
+!rgbsq_grasp/train_results_tensorboard/README.md
+rgbsq_grasp/pretrained/*
+!rgbsq_grasp/pretrained/README.md
+!rgbsq_grasp/pretrained/**/
+!rgbsq_grasp/pretrained/**/*.yml
 rgbsq_grasp/evaluation_results/
 rgbsq_grasp/temp/
 
@@ -46,7 +59,9 @@ rgbsq_grasp/temp/
 *.pth
 *.pt
 *.ckpt
-!metagrasp/MetaSQGrasp/datasets/supersq_grasp_data/multi_obj_full/011/epi_000000/scene.pt
+*.pkl
+*.zip
+!rgbsq_grasp/pretrained/**/*.yml
 __pycache__/
 *.py[cod]
 *.pyo
@@ -64,6 +79,12 @@ __pycache__/
 # --- OS ---
 .DS_Store
 Thumbs.db
+
+# --- Third-party clones (install separately) ---
+pointnet.pytorch/
+
+# --- Local notes / editor artifacts ---
+cursor_superquadrics_grasping_task_inte.md
 
 # --- Nested git metadata (removed before push; keep ignored as safety) ---
 **/.git/

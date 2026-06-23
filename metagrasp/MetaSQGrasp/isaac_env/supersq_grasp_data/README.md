@@ -1,6 +1,6 @@
 # SQ-v0-Data (`supersq_grasp_data`)
 
-Isaac Lab environment package for **SQNet synthetic data collection**. It extends the AIR grasping stack with a dual-camera setup, randomized object poses, and structured dataset export for downstream grasp-pose synthesis (`rgbsq_grasp`).
+Isaac Lab environment package for **SQ estimation synthetic data collection**. It extends the AIR grasping stack with a dual-camera setup, randomized object poses, and structured dataset export for downstream grasp-pose synthesis.
 
 Registered Gym task: **`SQ-v0-Data`**
 
@@ -31,7 +31,7 @@ flowchart LR
     E --> F[datasets/supersq_grasp_data/...]
     F --> G[tools/extract_partial_pc.py]
     F --> H[tools/convert_sq_to_npy.py]
-    H --> I[rgbsq_grasp]
+    H --> I[SQ estimation datasets]
 ```
 
 ---
@@ -47,7 +47,7 @@ flowchart LR
 
 ### `element_cfg.py`
 
-Scene-level constants inherited from `air_env_base.element_cfg`, narrowed for SQNet smoke tests.
+Scene-level constants inherited from `air_env_base.element_cfg`, narrowed for SQ estimation smoke tests.
 
 | Item | Value / role |
 |------|----------------|
@@ -289,7 +289,7 @@ These live outside `supersq_grasp_data/` but consume its output:
 | `tools/collect_demo_dataset.sh` | Collect lite demo episodes for all verified object IDs |
 | `tools/prune_sq_sample_lite.py` | Convert a full episode folder to lite export |
 | `tools/extract_partial_pc.py` | Extract object-only partial point clouds (`--mask`, `--color`) |
-| `tools/convert_sq_to_npy.py` | Convert raw samples to `rgbsq_grasp` `.npy` format |
+| `tools/convert_sq_to_npy.py` | Convert raw samples to estimator `.npy` format |
 | `tools/inspect_sq_sample.py` | Inspect depth/seg/pcd of one sample |
 | `tools/visualize_partial_pc.py` | Open3D viewer for target or all scene-object partial PCs |
 

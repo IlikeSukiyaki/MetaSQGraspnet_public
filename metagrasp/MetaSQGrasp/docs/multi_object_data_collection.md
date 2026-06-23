@@ -1,6 +1,6 @@
 # Multi-Object Scene Data Collection (SQ-v0-Data)
 
-This guide explains how to collect SQ-v0-Data episodes where **multiple objects** appear on the table at once. Use this for occlusion testing, cluttered-scene partial point clouds, and downstream SQNet evaluation on harder views.
+This guide explains how to collect SQ-v0-Data episodes where **multiple objects** appear on the table at once. Use this for occlusion testing, cluttered-scene partial point clouds, and downstream SQ/ExtSQ evaluation on harder views.
 
 Related docs:
 
@@ -269,7 +269,7 @@ Never use `--mask mesh` on multi-object scenes: distractor points can fall insid
 | Cluttered table, per-object visualization | `4` | `full` | `multi_obj_full/` |
 | Target-only occlusion testing | `2` | `lite` | `multi_obj/` |
 | Many episodes per target ID | `2` | `lite` | `multi_obj/` with `--max_episodes 50` |
-| rgbsq_grasp training on target partial PCs | `1` or `2` | `lite` or `full` | then `tools/convert_sq_to_npy.py` |
+| Estimator training on target partial PCs | `1` or `2` | `lite` or `full` | then `tools/convert_sq_to_npy.py` |
 
 Batch collection across the pool (each episode randomizes which K objects appear and which one is the target):
 
@@ -321,4 +321,4 @@ After one episode is saved:
 | `tools/inspect_sq_sample.py` | Print per-object point counts; show RGB/depth/instance |
 | `tools/extract_partial_pc.py` | Re-extract one target cloud from full tensors |
 | `tools/prune_sq_sample_lite.py` | Shrink full episodes after validation |
-| `tools/convert_sq_to_npy.py` | Convert target partial PCs to rgbsq_grasp `.npy` format |
+| `tools/convert_sq_to_npy.py` | Convert target partial PCs to estimator `.npy` format |

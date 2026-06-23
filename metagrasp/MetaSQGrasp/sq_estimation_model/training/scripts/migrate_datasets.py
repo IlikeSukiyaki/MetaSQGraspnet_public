@@ -33,6 +33,9 @@ OBJECT_TYPES = [
     "truncated_torus",
 ]
 
+EXTSQ_EST_TYPES = ["extended_sq"]
+REPO_ROOT = Path(__file__).resolve().parents[5]
+
 FILENAME_RE = re.compile(
     r"^(?P<prefix>.+)_(?P<instance>\d{4})_viewpoint_(?P<viewpoint>\d{2})\.npy$"
 )
@@ -194,11 +197,34 @@ def migrate_all(source_datasets: Path, target_datasets: Path) -> None:
     write_json(evaluation_dst / "evaluation_class_map.json", evaluation_map)
     write_json(evaluation_dst / "dataset_manifest.json", evaluation_manifest)
 
+    extsq_est_map = build_class_map(EXTSQ_EST_TYPES, "extsq_est")
+    extsq_est_dst = target_datasets / "extsq_est_dataset"
+    if extsq_est_dst.exists():
+        shutil.rmtree(extsq_est_dst)
+    extsq_est_manifest = migrate_csv_splits(
+        source_datasets / "extended_sq_dataset",
+        extsq_est_dst,
+        extsq_est_map,
+        {
+            "train": "train_datalist.csv",
+            "validation": "validation_datalist.csv",
+            "test": "test_datalist.csv",
+        },
+        exclude_viewpoints,
+    )
+    write_json(extsq_est_dst / "extsq_est_class_map.json", extsq_est_map)
+    write_json(extsq_est_dst / "dataset_manifest.json", extsq_est_manifest)
+    for metadata_name in ("instance_manifest.csv", "generation_config.json"):
+        metadata_src = source_datasets / "extended_sq_dataset" / metadata_name
+        if metadata_src.exists():
+            shutil.copy2(metadata_src, extsq_est_dst / metadata_name)
+
     print("Migration complete:")
     for name, manifest in [
         ("primitive_dataset", primitive_manifest),
         ("object_dataset", object_manifest),
         ("evaluation_dataset", evaluation_manifest),
+        ("extsq_est_dataset", extsq_est_manifest),
     ]:
         split_counts = {split: len(entries) for split, entries in manifest["splits"].items()}
         print(f"  {name}: {split_counts}")
@@ -209,7 +235,7 @@ def main() -> None:
     parser.add_argument(
         "--source",
         type=Path,
-        default=Path("/home/sustech/桌面/DSQNet/rgbsq_grasp/datasets"),
+        default=REPO_ROOT / "rgbsq_grasp" / "datasets",
         help="Source datasets root (rgbsq_grasp/datasets).",
     )
     parser.add_argument(

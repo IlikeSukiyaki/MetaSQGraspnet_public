@@ -1,17 +1,108 @@
 import numpy as np
-import open3d as o3d
 import os
-import functions.object_class as object_class
+import subprocess
+import sys
 import json
 import re
 import copy
 import csv
 import random
 import math
+import time
+from pathlib import Path
 
-from functions.utils_datagen import add_obj_to_vis, get_cam_pnts, get_partial_pc_via_depth, transform_to_pc_frame
-from functions.data_reader import create_object_from_data
-from functions.utils_numpy import inverse_SE3
+from functions.dataset_metadata import write_generation_config
+
+
+def _count_saved_viewpoints(obj_dir, object_name, object_num):
+	prefix = f"{object_name}_{object_num:04}_viewpoint_"
+	return sum(
+		1
+		for filename in os.listdir(obj_dir)
+		if filename.startswith(prefix) and filename.endswith(".npy")
+	)
+
+
+def _next_object_instance_num(obj_dir, object_name, num_objects, num_cams):
+	"""Resume from the first incomplete instance (14/16 views is normal after discards)."""
+	min_complete_views = max(1, num_cams - 2)
+	instance_nums = set()
+	for filename in os.listdir(obj_dir):
+		match = re.match(rf"{re.escape(object_name)}_(\d{{4}})_viewpoint_", filename)
+		if match:
+			instance_nums.add(int(match.group(1)))
+
+	for object_num in range(num_objects):
+		if object_num not in instance_nums:
+			return object_num
+		if _count_saved_viewpoints(obj_dir, object_name, object_num) < min_complete_views:
+			return object_num
+
+	return num_objects
+
+
+def _should_isolate_instances(visualize_object, visualize_pc, visualize_pc_with_mesh, render_mesh):
+	if os.environ.get("DSQNET_INLINE_GENERATION", "").lower() in {"1", "true", "yes"}:
+		return False
+	return not any((visualize_object, visualize_pc, visualize_pc_with_mesh, render_mesh))
+
+
+def _run_instance_worker(
+	object_name,
+	object_num,
+	dir_name,
+	num_cams,
+	num_pnts,
+	save_full_pc,
+	save_membership,
+):
+	worker = Path(__file__).resolve().parent / "generate_instance_worker.py"
+	project_root = Path(__file__).resolve().parent.parent
+	cmd = [
+		sys.executable,
+		str(worker),
+		"--object-name",
+		object_name,
+		"--object-num",
+		str(object_num),
+		"--dir-name",
+		str(dir_name),
+		"--num-cams",
+		str(num_cams),
+		"--num-pnts",
+		str(num_pnts),
+	]
+	if save_full_pc:
+		cmd.append("--save-full-pc")
+	if save_membership:
+		cmd.append("--save-membership")
+
+	# Filament/EGL can crash intermittently on some GPU drivers; retry a few times.
+	max_attempts = 5
+	print(f"[spawn] {object_name}_{object_num:04}", flush=True)
+	for attempt in range(1, max_attempts + 1):
+		result = subprocess.run(
+			cmd,
+			cwd=str(project_root),
+			start_new_session=True,
+		)
+		if result.returncode == 0:
+			return
+		if attempt < max_attempts:
+			print(
+				f"[retry {attempt}/{max_attempts - 1}] {object_name}_{object_num:04} "
+				f"(worker exit {result.returncode})",
+				flush=True,
+			)
+			time.sleep(1.0)
+
+	raise RuntimeError(
+		f"Instance worker failed for {object_name}_{object_num:04} "
+		f"after {max_attempts} attempts (exit code {result.returncode}). "
+		"Keep open3d>=0.18 (0.17 breaks mesh ops on many systems). "
+		"Default renderer is legacy Visualizer; set DSQNET_RENDERER=offscreen to try EGL."
+	)
+
 
 def generate_data(object_names, 
 				  num_objects, 
@@ -32,18 +123,60 @@ def generate_data(object_names,
 	for object_name in object_names:
 		with open(f"object_params/{object_name}.json") as readfile:
 			config = json.load(readfile)
+
+		if object_name in {"extended_sq", "deformable_superquadric", "superquadric"} and dir_name is not None:
+			os.makedirs(dir_name, exist_ok=True)
+			config_mode = "extended_sq" if object_name in {"extended_sq", "deformable_superquadric"} else "superquadric"
+			write_generation_config(
+				dir_name,
+				config_mode=config_mode,
+				object_names=object_names,
+				num_objects=num_objects,
+				num_cams=num_cams,
+				num_pnts=num_pnts,
+				object_param_config=config,
+				save_full_pc=save_full_pc,
+				save_membership=save_membership,
+			)
 		
 		if os.path.exists(f'{dir_name}/{object_name}') and append:
-			object_numbers = []
-			for filename in os.listdir(f"./{dir_name}/{object_name}/"):
-				object_numbers.append(int(re.search(r'\d+', filename).group(0)))
-			obj_start_num = max(object_numbers)
-			if object_numbers.count(obj_start_num) == num_cams:
-				obj_start_num += 1
+			obj_start_num = _next_object_instance_num(
+				f"{dir_name}/{object_name}", object_name, num_objects, num_cams
+			)
+			if obj_start_num >= num_objects:
+				print(f"----- skip {object_name}: all {num_objects} instances already generated -----")
+				continue
 		else:   
 			obj_start_num = 0
 
+		isolate_instances = _should_isolate_instances(
+			visualize_object, visualize_pc, visualize_pc_with_mesh, render_mesh
+		)
+
 		for object_num in range(obj_start_num, num_objects):
+			if isolate_instances:
+				_run_instance_worker(
+					object_name,
+					object_num,
+					dir_name,
+					num_cams,
+					num_pnts,
+					save_full_pc,
+					save_membership,
+				)
+				continue
+
+			import open3d as o3d
+			import functions.object_class as object_class
+			from functions.data_reader import create_object_from_data
+			from functions.utils_datagen import (
+				add_obj_to_vis,
+				get_cam_pnts,
+				get_partial_pc_via_depth,
+				transform_to_pc_frame,
+			)
+			from functions.utils_numpy import inverse_SE3
+
 			object_class_name = object_name.replace('truncated_', '')
 			obj = object_class.load_object[f'{object_class_name}'](config)
 			

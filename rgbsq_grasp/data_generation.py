@@ -10,12 +10,13 @@ if __name__ == '__main__':
 	parser.add_argument('--config', type=str)
 	parser.add_argument("--savedir", default="datasets/")
 	parser.add_argument("--name", default=None)
+	parser.add_argument("--num-objects", type=int, default=None)
 	args = parser.parse_args()
 
 	# configuration
 	config = args.config
-	if config not in ['primitive', 'object']:
-		raise ValueError('config is either primitive or object.')
+	if config not in ['primitive', 'object', 'extended_sq', 'superquadric']:
+		raise ValueError('config is primitive, object, extended_sq, or superquadric.')
 	savedir = args.savedir
 	if args.name is None:
 		dataset_name = datetime.now().strftime("%Y%m%d-%H%M")
@@ -34,7 +35,7 @@ if __name__ == '__main__':
 		num_partial_pnts = 1500
 		save_full_pc = True
 		save_membership = False
-		num_objects = 100	
+		num_objects = args.num_objects if args.num_objects is not None else 100	
 	elif config == 'object':
 		object_names = ['box', 
 						'cylinder', 
@@ -51,12 +52,25 @@ if __name__ == '__main__':
 		num_partial_pnts = 3000
 		save_full_pc = False
 		save_membership = True
-		num_objects = 100	
+		num_objects = args.num_objects if args.num_objects is not None else 100	
+	elif config == 'extended_sq':
+		object_names = ['extended_sq']
+		num_partial_pnts = 1500
+		save_full_pc = True
+		save_membership = False
+		num_objects = args.num_objects if args.num_objects is not None else 1000
+	elif config == 'superquadric':
+		object_names = ['superquadric']
+		num_partial_pnts = 1500
+		save_full_pc = True
+		save_membership = False
+		num_objects = args.num_objects if args.num_objects is not None else 100
 
 	# default parameters
 	dir_name = os.path.join(savedir, dataset_name)
 	append = True
-	num_cams = 16	
+	num_cams = 16
+	print(f"Generating dataset under {dir_name} (one isolated worker process per object instance)")
 
 	for trial in range(1000):
 		success = generate_data(object_names, 

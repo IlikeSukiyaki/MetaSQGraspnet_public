@@ -1,6 +1,6 @@
 # SuperSQ Grasp Workflow (`supersq_grasp-v0`)
 
-This guide explains the full **perception-to-grasp** pipeline for `supersq_grasp-v0`: live partial point cloud extraction, SQNet superquadric fitting, online Hand-E grasp sampling on the estimated mesh, Isaac execution, and offline visualization.
+This guide explains the full **perception-to-grasp** pipeline for `supersq_grasp-v0`: live partial point cloud extraction, SQ/ExtSQ fitting, online Hand-E grasp sampling on the estimated mesh, Isaac execution, and offline visualization.
 
 For the classical HDF5-based baseline (`object-v0-Classical`), see [classical_grasp_sampling.md](./classical_grasp_sampling.md).  
 For partial point cloud extraction from saved SQ-v0-Data samples, see [partial_pc_extraction.md](./partial_pc_extraction.md).  
@@ -18,8 +18,8 @@ For curated object assets, see [ur_grasp_database_workflow.md](./ur_grasp_databa
 | Scene | `UR_grasp_database/<id>/` objects |
 | Cameras | On-hand `camera_0` + fixed top-down `camera_1` |
 | Perception | Live object-only partial PC from top-down view (default) |
-| Shape | Single SQNet superquadric per episode |
-| Grasp | Online antipodal sampling on estimated SQ mesh |
+| Shape | Single `sq_esti_model` or `extsq_esti_model` primitive per episode |
+| Grasp | Online antipodal sampling on estimated SQ/ExtSQ mesh |
 | Execution | Classical pick-lift state machine (reach / approach / grasp / lift) |
 
 Unlike `object-v0-Classical`, this task does **not** load precomputed HDF5 grasps at runtime.
@@ -32,15 +32,15 @@ Unlike `object-v0-Classical`, this task does **not** load precomputed HDF5 grasp
 flowchart LR
   subgraph sim [Isaac Sim runtime]
     Cam[Top-down camera obs] --> PC[Partial PC extraction]
-    PC --> SQNet[SQNet fit]
-    SQNet --> Mesh[SQ mesh in robot frame]
+    PC --> SqEst[SQ or ExtSQ fit]
+    SqEst --> Mesh[Estimated mesh in robot frame]
     Mesh --> Sample[Online Hand-E grasp sampling]
     Sample --> Rank[Collision filter + top-down rank]
     Rank --> Exec[Pick-lift state machine]
   end
   subgraph debug [Optional debug export]
     PC --> DbgPC[partial_pc.ply]
-    SQNet --> DbgMesh[sq_mesh_robot.ply]
+    SqEst --> DbgMesh[sq_mesh_robot.ply]
     Rank --> DbgGrasp[grasp_axes.ply + sq_fit.json]
   end
   subgraph viz [Offline visualization]
@@ -55,8 +55,8 @@ flowchart LR
 1. Reset scene with one object from `--obj_ids`.
 2. Capture dual-camera observations (`camera_0`, `camera_1`).
 3. Extract object-only partial point cloud from the selected camera (default: top-down).
-4. Run SQNet once; cache the fit for that episode.
-5. Sample antipodal grasps on the SQ mesh, collision-filter against table/object/gripper.
+4. Run the selected SQ estimator once; cache the fit for that episode.
+5. Sample antipodal grasps on the SQ or ExtSQ mesh, collision-filter against table/object/gripper.
 6. Rank by score + top-down alignment; pick grasp by retry rank.
 7. Execute grasp with the Hand-E state machine.
 8. Optionally save debug artifacts and/or success videos.
@@ -77,19 +77,19 @@ flowchart LR
 Required for `supersq_grasp-v0`:
 
 - Isaac Lab / Isaac Sim stack (already in `env_isaaclab`)
-- SQNet runtime from `/home/sustech/桌面/DSQNet/rgbsq_grasp` (added to `sys.path` automatically)
+- SQ estimation runtime from `sq_estimation_model/training`
 - `omegaconf`, `scikit-learn`, `open3d`, `trimesh`
 
-Default SQNet checkpoint:
+Default SQ estimator checkpoint:
 
 ```text
-/home/sustech/桌面/DSQNet/rgbsq_grasp/pretrained/sqnet_config/example/model_best.pkl
+/home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp/sq_estimation_model/pretrained/sq_esti_model/model_best.pkl
 ```
 
-Default SQNet config:
+Default SQ estimator config:
 
 ```text
-/home/sustech/桌面/DSQNet/rgbsq_grasp/pretrained/sqnet_config/example/sqnet_config.yml
+/home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp/sq_estimation_model/pretrained/sq_esti_model/sq_esti_model_config.yml
 ```
 
 ### Object assets
@@ -151,7 +151,10 @@ conda activate env_isaaclab
 ```bash
 python -u run.py --task supersq_grasp-v0 --obj_ids 004 --num_envs 1 \
   --headless --enable_cameras --max_successful_grasps 1 \
-  --save_sq_debug
+  --save_sq_debug \
+  --sq_model extsq_esti_model \
+  --sq_config sq_estimation_model/pretrained/extsq_esti_model/extsq_esti_model_config.yml \
+  --sq_checkpoint sq_estimation_model/pretrained/extsq_esti_model/model_best.pkl
 ```
 
 At startup, look for:
@@ -209,8 +212,11 @@ python -u run.py --task supersq_grasp-v0 --obj_ids 000,001,004,011,016 --num_env
 | `--save_sq_debug` | off | Export perception/grasp debug artifacts |
 | `--sq_debug_dir` | auto timestamp dir | Custom debug output root |
 | `--sq_camera` | `topdown` | `topdown` (camera_1) or `onhand` (camera_0) |
-| `--sq_config` | rgbsq example YAML | SQNet config path |
-| `--sq_checkpoint` | rgbsq example pkl | SQNet weights |
+| `--sq_model` | `sq_esti_model` | `sq_esti_model` or `extsq_esti_model` |
+| `--sq_config` | local pretrained YAML | SQ estimator config path |
+| `--sq_checkpoint` | local pretrained pkl | SQ estimator weights |
+| `--sq_device` | auto | SQ estimator device |
+| `--sq_num_fitting_points` | `300` | Points used by SQ estimator preprocessing |
 | `--saved_video` | off | Save MP4 on successful grasps |
 | `--saved_video_dir` | auto | Custom video output directory |
 | `--saved_video_views` | `front,left,right,back` | External camera presets |
@@ -517,7 +523,7 @@ Run visualization from a desktop session (or with working OpenGL forwarding if r
 | [`run.py`](../run.py) | CLI entry, task routing |
 | [`isaac_env/supersq_grasp_env/`](../isaac_env/supersq_grasp_env/) | Task package (env, sim, SQ bridge) |
 | [`isaac_env/supersq_grasp_env/env.py`](../isaac_env/supersq_grasp_env/env.py) | Live PC → SQ fit → grasp selection |
-| [`isaac_env/supersq_grasp_env/sq_bridge.py`](../isaac_env/supersq_grasp_env/sq_bridge.py) | SQNet loader / inference |
+| [`isaac_env/supersq_grasp_env/sq_bridge.py`](../isaac_env/supersq_grasp_env/sq_bridge.py) | SQ estimator loader / inference |
 | [`tools/sq_partial_pc.py`](../tools/sq_partial_pc.py) | Partial PC extraction from live obs |
 | [`grasp_sampler/sq_mesh.py`](../grasp_sampler/sq_mesh.py) | SQ mesh + online antipodal sampling |
 | [`grasp_sampler/runtime.py`](../grasp_sampler/runtime.py) | Grasp filtering / ranking |
@@ -532,6 +538,6 @@ Run visualization from a desktop session (or with working OpenGL forwarding if r
 
 | Task | Purpose |
 |------|---------|
-| `object-v0-Classical` | Baseline: precomputed HDF5 grasps, no SQNet |
-| `SQ-v0-Data` | Collect dual-camera synthetic data for SQNet training ([demo samples](../datasets/supersq_grasp_data/demo/README.md)) |
+| `object-v0-Classical` | Baseline: precomputed HDF5 grasps, no online SQ estimator |
+| `SQ-v0-Data` | Collect dual-camera synthetic data for SQ/ExtSQ training ([demo samples](../datasets/supersq_grasp_data/demo/README.md)) |
 | `supersq_grasp-v0` | End-to-end live SQ perception + grasp + execution |

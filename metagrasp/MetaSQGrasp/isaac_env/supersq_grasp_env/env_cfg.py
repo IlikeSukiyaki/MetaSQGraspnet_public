@@ -1,4 +1,4 @@
-"""Isaac Lab scene config for SQNet-estimated superquadric grasping."""
+"""Isaac Lab scene config for SQ-estimated superquadric grasping."""
 
 from isaac_env.classical_shared.env_cfg import build_classical_env_cfg
 

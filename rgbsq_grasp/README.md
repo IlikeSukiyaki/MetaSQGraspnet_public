@@ -47,12 +47,16 @@ datasets
     └── truncated_torus
 
 ```
-- (Optional) If you want to generate your own custom dataset, run the following script:
-```
-python data_generation.py --config {X} --name {Y}
-```
-- `X` is either `primitive` or `object`.
-- `Y` is a folder name of your own dataset.
+- (Optional) If you want to generate your own custom dataset, see **[DATA_GENERATION.md](DATA_GENERATION.md)** for the full synthetic data engine (primitive, object, and extended superquadric modes, metadata, and training integration).
+
+  Quick examples:
+  ```
+  python data_generation.py --config primitive --name primitive_dataset
+  python data_generation.py --config object --name object_dataset
+  python data_generation.py --config extended_sq --name extended_sq_dataset
+  ```
+- `X` is `primitive`, `object`, or `extended_sq`.
+- `Y` is a folder name under `datasets/`.
 > **Tips for playing with code:** You can create various objects by editing the json file in the folder `object_params`. You can also adjust the parameters of the dataset such as the number of the points of partially observed point cloud in the code `data_generation.py`.
 > **Warning:** The data generation does not work in server (i.e., without a connected display). If you want generate a dataset in server, try [Open3D headless rendering](http://www.open3d.org/docs/latest/tutorial/Advanced/headless_rendering.html).
 

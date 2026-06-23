@@ -9,7 +9,16 @@ class SqEstiLoss(nn.Module):
         super().__init__()
         self.weight = kargs["weight"]
 
-    def forward(self, x, l_gt, output):
+    def compute_terms(self, x, l_gt, output):
+        """
+        Args:
+            x (b x 3 x n): ground-truth point cloud.
+            l_gt (b x 3): orientation prior.
+            output (b x 12): superquadric parameters.
+
+        Returns:
+            dict with loss_total, loss_dist, loss_z, loss_z_weighted (batch means).
+        """
         position = output[:, :3]
         orientation = output[:, 3:7]
         rotation = quaternions_to_rotation_matrices_torch(orientation)
@@ -23,10 +32,23 @@ class SqEstiLoss(nn.Module):
         l_output = rotation[:, :3, 2]
         loss_z = torch.norm(torch.cross(l_output, l_gt, dim=1), dim=1)
 
-        loss = torch.mean(loss_dist) + self.weight * torch.mean(loss_z)
-        if torch.isnan(loss) or torch.isinf(loss):
+        loss_dist_mean = torch.mean(loss_dist)
+        loss_z_mean = torch.mean(loss_z)
+        loss_z_weighted = self.weight * loss_z_mean
+        loss_total = loss_dist_mean + loss_z_weighted
+
+        if torch.isnan(loss_total) or torch.isinf(loss_total):
             raise ValueError("The loss function is inf or nan.")
-        return loss
+
+        return {
+            "loss_total": loss_total,
+            "loss_dist": loss_dist_mean,
+            "loss_z": loss_z_mean,
+            "loss_z_weighted": loss_z_weighted,
+        }
+
+    def forward(self, x, l_gt, output):
+        return self.compute_terms(x, l_gt, output)["loss_total"]
 
     def sq_distance(self, x, parameters):
         a1 = parameters[:, 0:1]

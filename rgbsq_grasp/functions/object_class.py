@@ -3,7 +3,7 @@ import random
 import open3d as o3d
 
 from functions.utils_numpy import define_SE3, inverse_SE3, change_SO3, get_p, get_SO3, exp_so3
-from functions.primitives import Cylinder, Box, Cone, Torus, Torus_handle, Superquadric
+from functions.primitives import Cylinder, Box, Cone, Torus, Torus_handle, Superquadric, DeformableSuperquadric
 
 class Object:
 	def __init__(self, set_of_primitives, transform=True, collisionBox=False):
@@ -219,6 +219,145 @@ class Ellipsoid_Object(Object):
 		P1 = Superquadric(SE3=P1_SE3, parameters=P1_parameters, color=P1_color)
 
 		self.initialzier([P1], transform=False)
+
+
+class Superquadric_Object(Object):
+
+	def __init__(self, config):
+		if config['random'] is True:
+			a_min = config['a1']['min']
+			a_max = config['a1']['max']
+			max_ratio = config.get('max_axis_ratio', 3.5)
+			for _ in range(100):
+				axes = sorted(random.uniform(a_min, a_max) for _ in range(3))
+				if axes[2] / max(axes[0], 1e-6) <= max_ratio:
+					a1, a2, a3 = axes[0], axes[1], axes[2]
+					break
+			else:
+				axes = sorted(random.uniform(a_min, a_max) for _ in range(3))
+				a1, a2, a3 = axes[0], axes[1], axes[2]
+
+			e1 = random.uniform(config['e1']['min'], config['e1']['max'])
+			e2 = random.uniform(config['e2']['min'], config['e2']['max'])
+		else:
+			a1 = config['a1']
+			a2 = config['a2']
+			a3 = config['a3']
+			e1 = config['e1']
+			e2 = config['e2']
+
+		if a1 > a2:
+			a1, a2 = a2, a1
+
+		P1_SE3 = np.identity(4)
+		P1_parameters = {"a1": a1, "a2": a2, "a3": a3, "e1": e1, "e2": e2}
+
+		if 'color' in config.keys():
+			P1_color = config['color']
+		else:
+			P1_color = None
+
+		P1 = Superquadric(SE3=P1_SE3, parameters=P1_parameters, color=P1_color)
+
+		self.initialzier([P1], transform=False)
+
+
+def _sample_dsq_axes(profile, a_min, a_max, max_ratio):
+	"""Sample (a1, a2, a3) with profile-specific axis-ratio constraints; a1 <= a2 <= a3."""
+	for _ in range(100):
+		if profile == "compact":
+			ratio_cap = min(1.8, max_ratio)
+			axes = sorted(random.uniform(a_min, a_max) for _ in range(3))
+		elif profile == "elongated":
+			short = random.uniform(a_min, a_max * 0.5)
+			mid = random.uniform(short, min(a_max, short * 2.0))
+			long = random.uniform(mid, min(a_max, short * max_ratio))
+			axes = sorted([short, mid, long])
+		elif profile == "flattened":
+			short = random.uniform(a_min, a_max * 0.4)
+			mid = random.uniform(max(short * 1.2, a_min), a_max)
+			long = random.uniform(mid, min(a_max, short * max_ratio))
+			axes = sorted([short, mid, long])
+		else:
+			axes = sorted(random.uniform(a_min, a_max) for _ in range(3))
+
+		if axes[2] / max(axes[0], 1e-6) <= max_ratio:
+			return axes[0], axes[1], axes[2]
+
+	axes = sorted(random.uniform(a_min, a_max) for _ in range(3))
+	return axes[0], axes[1], axes[2]
+
+
+class ExtendedSQ_Object(Object):
+
+	def __init__(self, config):
+		if config["random"] is True:
+			profiles = ["compact", "elongated", "flattened", "high_deformation"]
+			weights = config.get("profile_weights", [0.4, 0.3, 0.2, 0.1])
+			profile = random.choices(profiles, weights=weights, k=1)[0]
+
+			a_min = config["a1"]["min"]
+			a_max = config["a1"]["max"]
+			max_ratio = config.get("max_axis_ratio", 3.5)
+			a1, a2, a3 = _sample_dsq_axes(profile, a_min, a_max, max_ratio)
+
+			if a1 > a2:
+				a1, a2 = a2, a1
+
+			e1 = random.uniform(config["e1"]["min"], config["e1"]["max"])
+			e2 = random.uniform(config["e2"]["min"], config["e2"]["max"])
+
+			if profile == "high_deformation":
+				k = random.uniform(-0.65, -0.35) if random.random() < 0.5 else random.uniform(0.35, 0.65)
+				b = random.uniform(0.35, 0.55)
+			else:
+				k = random.uniform(config["k"]["min"], config["k"]["max"])
+				b = random.uniform(config["b"]["min"], config["b"]["max"])
+
+			alpha = random.uniform(0, 2 * np.pi)
+			cos_alpha = float(np.cos(alpha))
+			sin_alpha = float(np.sin(alpha))
+		else:
+			profile = "fixed"
+			a1 = config["a1"]
+			a2 = config["a2"]
+			a3 = config["a3"]
+			e1 = config["e1"]
+			e2 = config["e2"]
+			k = config["k"]
+			b = config["b"]
+			cos_alpha = config["cos_alpha"]
+			sin_alpha = config["sin_alpha"]
+			alpha = float(np.arctan2(sin_alpha, cos_alpha))
+
+		self.sampling_profile = profile
+		self.alpha = alpha
+
+		P1_SE3 = np.identity(4)
+		P1_parameters = {
+			"a1": a1,
+			"a2": a2,
+			"a3": a3,
+			"e1": e1,
+			"e2": e2,
+			"k": k,
+			"b": b,
+			"cos_alpha": cos_alpha,
+			"sin_alpha": sin_alpha,
+		}
+
+		if "color" in config.keys():
+			P1_color = config["color"]
+		else:
+			P1_color = None
+
+		P1 = DeformableSuperquadric(SE3=P1_SE3, parameters=P1_parameters, color=P1_color)
+		P1.type = "extended_sq"
+
+		self.initialzier([P1], transform=False)
+
+
+DeformableSuperquadric_Object = ExtendedSQ_Object
 
 
 class Bottle_Cone(Object):
@@ -495,6 +634,9 @@ load_object = {
 	"cylinder": Cylinder_Object,
 	"torus": Torus_Object,
 	"ellipsoid": Ellipsoid_Object,
+	"superquadric": Superquadric_Object,
+	"extended_sq": ExtendedSQ_Object,
+	"deformable_superquadric": ExtendedSQ_Object,
 	"bottle_cone": Bottle_Cone,
 	"dumbbell": Dumbbell,
 	"hammer_cylinder": Hammer_Cylinder,

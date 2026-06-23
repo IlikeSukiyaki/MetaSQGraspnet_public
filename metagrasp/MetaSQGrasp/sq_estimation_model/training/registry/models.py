@@ -4,7 +4,7 @@ import torch
 from omegaconf import OmegaConf
 
 from backbone.dgcnn import DGCNN
-from extended_sq_esti_model.network import ExtendedSqEstiModel
+from extsq_esti_model.network import ExtSqEstiModel
 from sq_esti_model.network import SqEstiModel
 
 
@@ -23,7 +23,7 @@ def get_model_instance(name):
     try:
         return {
             "sq_esti_model": SqEstiModel,
-            "extended_sq_esti_model": ExtendedSqEstiModel,
+            "extsq_esti_model": ExtSqEstiModel,
         }[name]
     except KeyError as exc:
         raise ValueError(f"Model {name} not available") from exc

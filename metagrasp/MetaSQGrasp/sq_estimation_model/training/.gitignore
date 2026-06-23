@@ -1,8 +1,14 @@
-train_results/
+train_results/*
+!train_results/README.md
+eval_results/*
+!eval_results/README.md
 wandb/
 datasets/**
+!datasets/README.md
 !datasets/**/
 !datasets/**/dataset_manifest.json
 !datasets/**/*_class_map.json
+!datasets/**/generation_config.json
+!datasets/**/instance_manifest.csv
 __pycache__/
 *.pyc

@@ -321,6 +321,7 @@ gen_primitive = {
 	"cylinder": Cylinder,
 	"torus": Torus,
 	"superquadric": Superquadric,
+	"extended_sq": DeformableSuperquadric,
 	"deformable_superquadric": DeformableSuperquadric,
 }
 
@@ -330,6 +331,7 @@ gen_parameter = {
 	"cylinder": ['radius', 'height'],
 	"torus": ['torus_radius', 'tube_radius', 'c1'],
 	"superquadric": ['a1', 'a2', 'a3', 'e1', 'e2'],
+	"extended_sq": ['a1', 'a2', 'a3', 'e1', 'e2', 'k', 'b', 'cos_alpha', 'sin_alpha'],
 	"deformable_superquadric": ['a1', 'a2', 'a3', 'e1', 'e2', 'k', 'b', 'cos_alpha', 'sin_alpha'],
 }
 

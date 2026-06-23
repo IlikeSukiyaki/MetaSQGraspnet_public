@@ -3,8 +3,14 @@
 *.pyc
 __pycache__/
 
-datasets/
-train_results/
-pretrained/
+datasets/*
+!datasets/README.md
+train_results/*
+!train_results/README.md
+train_results_tensorboard/*
+!train_results_tensorboard/README.md
+pretrained/*
+!pretrained/README.md
+!pretrained/**/*.yml
 temp/
 wandb/

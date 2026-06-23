@@ -13,14 +13,14 @@ import transforms3d
 from grasp_sampler.gripper_profiles import ParallelJawProfile, get_profile
 
 
-def _rgbsq_root() -> Path:
-    return Path(__file__).resolve().parents[3] / "rgbsq_grasp"
+def _training_root() -> Path:
+    return Path(__file__).resolve().parents[1] / "sq_estimation_model" / "training"
 
 
-def _ensure_rgbsq_path() -> None:
-    root = _rgbsq_root()
+def _ensure_training_path() -> None:
+    root = _training_root()
     if not root.exists():
-        raise FileNotFoundError(f"Missing rgbsq_grasp checkout: {root}")
+        raise FileNotFoundError(f"Missing SQ estimation training package: {root}")
     root_str = str(root)
     if root_str not in sys.path:
         sys.path.insert(0, root_str)
@@ -32,8 +32,8 @@ def superquadric_trimesh_cm(
     resolution: int = 12,
 ) -> trimesh.Trimesh:
     """Build a local-frame superquadric mesh in centimeters."""
-    _ensure_rgbsq_path()
-    from functions.primitives import mesh_superquadric
+    _ensure_training_path()
+    from geometry.primitives import mesh_superquadric
 
     mesh_o3d = mesh_superquadric(parameters, np.eye(4, dtype=float), resolution=resolution)
     vertices = np.asarray(mesh_o3d.vertices, dtype=np.float64) * 100.0
@@ -42,6 +42,34 @@ def superquadric_trimesh_cm(
     if mesh.face_normals.shape[0] == 0:
         raise ValueError("Generated superquadric mesh has no face normals.")
     return mesh
+
+
+def extsq_trimesh_cm(
+    parameters: dict[str, float],
+    *,
+    resolution: int = 12,
+) -> trimesh.Trimesh:
+    """Build a local-frame extended superquadric mesh in centimeters."""
+    _ensure_training_path()
+    from geometry.primitives import mesh_deformable_superquadric
+
+    mesh_o3d = mesh_deformable_superquadric(parameters, np.eye(4, dtype=float), resolution=resolution)
+    vertices = np.asarray(mesh_o3d.vertices, dtype=np.float64) * 100.0
+    faces = np.asarray(mesh_o3d.triangles, dtype=np.int64)
+    mesh = trimesh.Trimesh(vertices=vertices, faces=faces, process=True)
+    if mesh.face_normals.shape[0] == 0:
+        raise ValueError("Generated ExtSQ mesh has no face normals.")
+    return mesh
+
+
+def estimation_trimesh_cm(
+    parameters: dict[str, float],
+    *,
+    resolution: int = 12,
+) -> trimesh.Trimesh:
+    if {"k", "b", "cos_alpha", "sin_alpha"}.issubset(parameters):
+        return extsq_trimesh_cm(parameters, resolution=resolution)
+    return superquadric_trimesh_cm(parameters, resolution=resolution)
 
 
 def _rodrigues_rotation(axis: np.ndarray, angle: float) -> np.ndarray:
