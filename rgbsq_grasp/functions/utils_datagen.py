@@ -1,3 +1,5 @@
+import gc
+import os
 import numpy as np
 import math
 import open3d as o3d
@@ -8,119 +10,215 @@ import copy
 def add_obj_to_vis(obj, vis):
 	obj.add_to_vis(vis)
 
-def get_partial_pc_via_depth(obj, cam_poses, num_pcd_points=3000, get_color=True, plot=False, visualize_pc_with_mesh=False, render_mesh=False):
-	
-	cam_poses = np.asarray(cam_poses)
-	cam_poses = cam_poses.reshape((-1,3))
-	num_samples = cam_poses.shape[0]
 
+def _render_backend():
+	"""Default to legacy Visualizer; offscreen only when explicitly requested."""
+	backend = os.environ.get("DSQNET_RENDERER", "legacy").strip().lower()
+	if backend in {"offscreen", "egl", "filament"}:
+		return "offscreen"
+	return "legacy"
+
+
+def _camera_intrinsics():
 	depth_im_width = 640 * 2
 	depth_im_height = 1000
-	FOV_H = 75 # degree
-	FOV_V = 65 # degree
 	fx = 498.83063258
 	fy = 498.83063258
 	cx = 0.5
 	cy = 0.5
-
 	camera = o3d.camera.PinholeCameraParameters()
-	camera.intrinsic.set_intrinsics(depth_im_width, depth_im_height, fx, fy, depth_im_width * cx - 0.5, depth_im_height * cy - 0.5)
+	camera.intrinsic.set_intrinsics(
+		depth_im_width,
+		depth_im_height,
+		fx,
+		fy,
+		depth_im_width * cx - 0.5,
+		depth_im_height * cy - 0.5,
+	)
+	return camera, depth_im_width, depth_im_height
+
+
+def _downsample_partial_pcd(partial_pcd, num_pcd_points):
+	v_size = 0.5
+	v_min = 0
+	v_max = 1
+	v_last_met_requirements = None
+	for _trial in range(100):
+		num_tmp_pcd_pnts = np.asarray(partial_pcd.voxel_down_sample(v_size).points).shape[0]
+		if num_tmp_pcd_pnts - num_pcd_points >= 0 and num_tmp_pcd_pnts - num_pcd_points < 10:
+			break
+		if num_tmp_pcd_pnts > num_pcd_points:
+			v_last_met_requirements = v_size
+			v_min = v_size
+		if num_tmp_pcd_pnts < num_pcd_points:
+			v_max = v_size
+		v_size = (v_min + v_max) / 2
+		if _trial == 99 and num_tmp_pcd_pnts > num_pcd_points:
+			v_size = v_last_met_requirements if v_last_met_requirements is not None else v_min
+	partial_pcd = partial_pcd.voxel_down_sample(v_size)
+	partial_pcd = partial_pcd.select_by_index([*range(num_pcd_points)])
+	return partial_pcd, v_size
+
+
+def _capture_viewpoint(camera, render_fn, obj, cam_pose, diameter, num_pcd_points, get_color):
+	cam_up = np.array([0, 0, 1])
+	theta = np.arccos(np.dot(cam_up, cam_pose) / np.linalg.norm(cam_pose))
+	if abs(theta) < 1e-4 or abs(math.pi - theta) < 1e-4:
+		cam_up = np.array([0, 1, 0])
+	cam_target = obj.mesh.get_center()
+	cam_pos = obj.mesh.get_center() + diameter * cam_pose / np.linalg.norm(cam_pose)
+
+	cam_look = cam_pos - cam_target
+	cam_look = cam_look / np.linalg.norm(cam_look)
+	cam_right = np.cross(cam_up, cam_look)
+	cam_right = cam_right / np.linalg.norm(cam_right)
+	cam_up = np.cross(cam_look, cam_right)
+	cam_up = cam_up / np.linalg.norm(cam_up)
+	cam_R = np.array([cam_right, -cam_up, -cam_look])
+
+	cnt = 1
+	while True:
+		cam_t = -np.dot(cam_R, cam_pos)
+		cam_extrinsic_matrix = define_SE3(cam_R, cam_t)
+		camera.extrinsic = cam_extrinsic_matrix
+		partial_pcd = render_fn(camera, cam_extrinsic_matrix, get_color)
+
+		num_orig_pcd_pnts = np.asarray(partial_pcd.points).shape[0]
+		if num_orig_pcd_pnts > num_pcd_points:
+			break
+
+		cnt += 1
+		print("zooming")
+		diameter_zoom = (1.5 - cnt * 0.1) * np.linalg.norm(obj.mesh.get_oriented_bounding_box().extent)
+		cam_pos = obj.mesh.get_center() + diameter_zoom * cam_pose / np.linalg.norm(cam_pose)
+
+	return _downsample_partial_pcd(partial_pcd, num_pcd_points)
+
+
+def _get_partial_pc_via_depth_legacy(
+	obj, cam_poses, num_pcd_points=3000, get_color=True, render_mesh=False
+):
+	cam_poses = np.asarray(cam_poses).reshape((-1, 3))
+	camera, depth_im_width, depth_im_height = _camera_intrinsics()
 	diameter = 1.5 * np.linalg.norm(obj.mesh.get_oriented_bounding_box().extent)
 	partial_pcds = []
+	voxel_size = []
 
 	vis = o3d.visualization.Visualizer()
 	vis.create_window(width=depth_im_width, height=depth_im_height, visible=render_mesh)
 	add_obj_to_vis(obj, vis)
 	vis.get_render_option().load_from_json("functions/RenderOption.json")
 
+	def render_fn(camera_params, cam_extrinsic_matrix, use_color):
+		ctr = vis.get_view_control()
+		ctr.convert_from_pinhole_camera_parameters(camera_params)
+		vis.poll_events()
+		vis.update_renderer()
+		depth = vis.capture_depth_float_buffer()
+		if use_color:
+			rgb = o3d.geometry.Image((np.asarray(vis.capture_screen_float_buffer()) * 255).astype(np.uint8))
+			rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(
+				rgb, depth, convert_rgb_to_intensity=False, depth_scale=1, depth_trunc=3
+			)
+			return o3d.geometry.PointCloud.create_from_rgbd_image(
+				rgbd, camera_params.intrinsic, cam_extrinsic_matrix
+			)
+		partial_pcd = o3d.geometry.PointCloud.create_from_depth_image(
+			depth, camera_params.intrinsic, cam_extrinsic_matrix
+		)
+		partial_pcd.paint_uniform_color([0, 0, 0.9])
+		return partial_pcd
+
+	try:
+		for sample in range(cam_poses.shape[0]):
+			partial_pcd, v_size = _capture_viewpoint(
+				camera, render_fn, obj, cam_poses[sample], diameter, num_pcd_points, get_color
+			)
+			partial_pcds.append(partial_pcd)
+			voxel_size.append(v_size)
+	finally:
+		vis.destroy_window()
+		gc.collect()
+
+	return partial_pcds, voxel_size
+
+
+def _get_partial_pc_via_depth_offscreen(
+	obj, cam_poses, num_pcd_points=3000, get_color=True
+):
+	cam_poses = np.asarray(cam_poses).reshape((-1, 3))
+	camera, depth_im_width, depth_im_height = _camera_intrinsics()
+	diameter = 1.5 * np.linalg.norm(obj.mesh.get_oriented_bounding_box().extent)
+	partial_pcds = []
 	voxel_size = []
-	for sample in range(num_samples):
-		cam_up = np.array([0, 0, 1])
-		theta = np.arccos(np.dot(cam_up, cam_poses[sample, :]) / np.linalg.norm(cam_poses[sample, :]))
-		if abs(theta) < 1e-4 or abs(math.pi - theta) < 1e-4:
-			cam_up = np.array([0, 1, 0])
-		cam_target = obj.mesh.get_center()
-		cam_pos = obj.mesh.get_center() + diameter * cam_poses[sample, :] / np.linalg.norm(cam_poses[sample, :])
-		
-		cam_look = cam_pos - cam_target
-		cam_look = cam_look / np.linalg.norm(cam_look)
 
-		cam_right = np.cross(cam_up, cam_look)
-		cam_right = cam_right / np.linalg.norm(cam_right)
+	renderer = o3d.visualization.rendering.OffscreenRenderer(depth_im_width, depth_im_height)
+	renderer.scene.set_background([1.0, 1.0, 1.0, 1.0])
+	material = o3d.visualization.rendering.MaterialRecord()
+	material.shader = "defaultUnlit"
+	renderer.scene.add_geometry("object_mesh", obj.mesh, material)
 
-		cam_up = np.cross(cam_look, cam_right)
-		cam_up = cam_up / np.linalg.norm(cam_up)
+	def render_fn(camera_params, cam_extrinsic_matrix, use_color):
+		renderer.setup_camera(camera_params.intrinsic, cam_extrinsic_matrix)
+		depth = np.asarray(renderer.render_to_depth_image(z_in_view_space=True))
+		depth_img = o3d.geometry.Image(depth.astype(np.float32))
+		if use_color:
+			color = np.asarray(renderer.render_to_image())
+			rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(
+				o3d.geometry.Image(color),
+				depth_img,
+				convert_rgb_to_intensity=False,
+				depth_scale=1,
+				depth_trunc=3,
+			)
+			return o3d.geometry.PointCloud.create_from_rgbd_image(
+				rgbd, camera_params.intrinsic, cam_extrinsic_matrix
+			)
+		partial_pcd = o3d.geometry.PointCloud.create_from_depth_image(
+			depth_img, camera_params.intrinsic, cam_extrinsic_matrix
+		)
+		partial_pcd.paint_uniform_color([0, 0, 0.9])
+		return partial_pcd
 
-		cam_R = np.array([cam_right, - cam_up, - cam_look])
-		diameter_zoom = diameter
-		cnt = 1
-		while True:
-			cam_t = - np.dot(cam_R, cam_pos)
+	try:
+		for sample in range(cam_poses.shape[0]):
+			partial_pcd, v_size = _capture_viewpoint(
+				camera, render_fn, obj, cam_poses[sample], diameter, num_pcd_points, get_color
+			)
+			partial_pcds.append(partial_pcd)
+			voxel_size.append(v_size)
+	finally:
+		del renderer
+		gc.collect()
 
-			cam_extrinsic_matrix = define_SE3(cam_R, cam_t)
+	return partial_pcds, voxel_size
 
-			camera.extrinsic = cam_extrinsic_matrix
 
-			ctr = vis.get_view_control()
-			ctr.convert_from_pinhole_camera_parameters(camera)
-			
-			vis.poll_events()
-			vis.update_renderer()
-
-			depth = vis.capture_depth_float_buffer()
-			RGB =  vis.capture_screen_float_buffer()
-			RGB = o3d.geometry.Image((np.asarray(RGB) * 255).astype(np.uint8))
-
-			if get_color:
-				RGBD = o3d.geometry.RGBDImage.create_from_color_and_depth(RGB, depth, convert_rgb_to_intensity=False, depth_scale=1, depth_trunc=3)
-				partial_pcd = o3d.geometry.PointCloud.create_from_rgbd_image(RGBD, camera.intrinsic, cam_extrinsic_matrix)
-			else:	
-				partial_pcd = o3d.geometry.PointCloud.create_from_depth_image(depth, camera.intrinsic, cam_extrinsic_matrix)
-				partial_pcd.paint_uniform_color([0, 0, 0.9])
-
-			num_orig_pcd_pnts = np.asarray(partial_pcd.points).shape[0]
-			if num_orig_pcd_pnts > num_pcd_points:
-				break
-
-			cnt += 1
-			print('zooming')
-			diameter_zoom = (1.5 - cnt * 0.1) * np.linalg.norm(obj.mesh.get_oriented_bounding_box().extent)
-
-			cam_pos = obj.mesh.get_center() + diameter_zoom * cam_poses[sample, :] / np.linalg.norm(cam_poses[sample, :])
-		
-		# downsample
-		v_size = 0.5
-		v_min = 0
-		v_max = 1
-		v_last_met_requirements = None
-		cnt = 0
-		for trial in range(100):
-			num_tmp_pcd_pnts = np.asarray(partial_pcd.voxel_down_sample(v_size).points).shape[0]
-			if num_tmp_pcd_pnts - num_pcd_points >= 0 and num_tmp_pcd_pnts - num_pcd_points < 10:
-				break 
-			if num_tmp_pcd_pnts > num_pcd_points:
-				v_last_met_requirements = v_size
-				v_min = v_size
-
-			if num_tmp_pcd_pnts < num_pcd_points:
-				v_max = v_size
-			v_size = (v_min + v_max) / 2
-			if trial == 99 and num_tmp_pcd_pnts > num_pcd_points:
-				if v_last_met_requirements is not None:
-					v_size = v_last_met_requirements
-				else:
-					v_size = v_min
-			cnt += 1
-		# print('cnt', cnt)
-		partial_pcd = partial_pcd.voxel_down_sample(v_size)
-		partial_pcd = partial_pcd.select_by_index([*range(num_pcd_points)])
-		partial_pcds.append(partial_pcd)
-		voxel_size.append(v_size)
-
-	vis.destroy_window()
+def get_partial_pc_via_depth(
+	obj,
+	cam_poses,
+	num_pcd_points=3000,
+	get_color=True,
+	plot=False,
+	visualize_pc_with_mesh=False,
+	render_mesh=False,
+):
+	backend = _render_backend()
+	if backend == "offscreen":
+		partial_pcds, voxel_size = _get_partial_pc_via_depth_offscreen(
+			obj, cam_poses, num_pcd_points=num_pcd_points, get_color=get_color
+		)
+	else:
+		partial_pcds, voxel_size = _get_partial_pc_via_depth_legacy(
+			obj,
+			cam_poses,
+			num_pcd_points=num_pcd_points,
+			get_color=get_color,
+			render_mesh=render_mesh,
+		)
 
 	if plot is True:
-		for sample in range(num_samples):
+		for sample in range(len(partial_pcds)):
 			if visualize_pc_with_mesh:
 				o3d.visualization.draw_geometries([obj.mesh, partial_pcds[sample]])
 			else:

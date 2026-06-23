@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Convert SQ-v0-Data raw samples to rgbsq_grasp .npy point-cloud samples."""
+"""Convert SQ-v0-Data raw samples to estimator .npy point-cloud samples."""
 
 from __future__ import annotations
 
@@ -12,12 +12,12 @@ from pathlib import Path
 import numpy as np
 import open3d as o3d
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-RGBSQ_ROOT = REPO_ROOT / "rgbsq_grasp"
-if str(RGBSQ_ROOT) not in sys.path:
-    sys.path.insert(0, str(RGBSQ_ROOT))
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+TRAINING_ROOT = PROJECT_ROOT / "sq_estimation_model" / "training"
+if str(TRAINING_ROOT) not in sys.path:
+    sys.path.insert(0, str(TRAINING_ROOT))
 
-from functions.pc_preprocess import process_pc  # noqa: E402
+from geometry.pc_preprocess import process_pc  # noqa: E402
 
 TOOLS_ROOT = Path(__file__).resolve().parent
 if str(TOOLS_ROOT) not in sys.path:
@@ -124,7 +124,7 @@ def convert_samples(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True, help="Raw SQ object directory, e.g. datasets/supersq_grasp_data/001.")
-    parser.add_argument("--output", type=Path, required=True, help="Output directory for rgbsq_grasp .npy samples.")
+    parser.add_argument("--output", type=Path, required=True, help="Output directory for estimator .npy samples.")
     parser.add_argument("--camera", choices=CAMERA_CHOICES, default="both", help="Which camera views to export.")
     parser.add_argument("--num_points", type=int, default=3000, help="Number of points in each partial_pc.")
     parser.add_argument(
@@ -138,7 +138,7 @@ def main() -> None:
     saved_paths = convert_samples(
         args.input, args.output, args.camera, args.num_points, args.mask
     )
-    print(f"Saved {len(saved_paths)} SQNet samples to {args.output}")
+    print(f"Saved {len(saved_paths)} estimator samples to {args.output}")
 
 
 if __name__ == "__main__":

@@ -139,7 +139,8 @@ class PrimitiveDataset(torch.utils.data.Dataset):
 
     def preprocess_shape_info(self, shape_info):
         shape_parameters = shape_info["parameters"]
-        shape_parameters_new = dict.fromkeys([f"param{i+1}" for i in range(5)], 0)
+        n_params = len(shape_parameters)
+        shape_parameters_new = dict.fromkeys([f"param{i+1}" for i in range(max(n_params, 5))], 0)
         for idx, (_, value) in enumerate(shape_parameters.items()):
             shape_parameters_new[f"param{idx+1}"] = value
         shape_info["parameters"] = shape_parameters_new
@@ -154,10 +155,15 @@ class PrimitiveDataset(torch.utils.data.Dataset):
         # parameter normalize
         shape_type = shape_info["type"]
         shape_parameters = shape_info["parameters"]
+        dimensionless_keys = {
+            "torus": {"param3"},
+            "superquadric": {"param4", "param5"},
+            "extended_sq": {"param4", "param5", "param6", "param8", "param9"},
+            "deformable_superquadric": {"param4", "param5", "param6", "param8", "param9"},
+        }
+        skip_keys = dimensionless_keys.get(shape_type, set())
         for idx, (key, value) in enumerate(shape_parameters.items()):
-            if shape_type == "torus" and key == "param3":
-                pass
-            elif shape_type == "superquadric" and (key == "param4" or key == "param5"):
+            if key in skip_keys:
                 pass
             else:
                 shape_parameters[key] = value / diagonal_len

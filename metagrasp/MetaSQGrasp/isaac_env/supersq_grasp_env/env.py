@@ -1,4 +1,4 @@
-"""SQNet-estimated superquadric grasp environment."""
+"""SQ-estimated superquadric grasp environment."""
 
 from __future__ import annotations
 

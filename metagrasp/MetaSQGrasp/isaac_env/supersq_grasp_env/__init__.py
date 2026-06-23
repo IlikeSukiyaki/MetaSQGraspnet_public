@@ -1,4 +1,4 @@
-"""SQNet-estimated superquadric grasp task."""
+"""SQ-estimated superquadric grasp task."""
 
 import gymnasium as gym
 

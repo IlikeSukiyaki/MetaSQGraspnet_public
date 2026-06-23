@@ -7,6 +7,48 @@ class SuperquadricLoss(nn.Module):
         super(SuperquadricLoss, self).__init__()
         self.weight = kargs['weight']
 
+    def compute_terms(self, x, l_gt, output):
+        """
+        Args:
+            x (b x 3 x n): ground-truth point cloud.
+            l_gt (b x 3): orientation prior.
+            output (b x 12): superquadric parameters.
+
+        Returns:
+            dict with loss_total, loss_dist, loss_z, loss_z_weighted (batch means).
+        """
+        position = output[:, :3]
+        orientation = output[:, 3:7]
+        rotation = quaternions_to_rotation_matrices_torch(orientation)
+        parameters = output[:, 7:]
+
+        x_position = x[:, :3, :]
+        rotation_t = rotation.permute(0, 2, 1)
+        x_transformed = -rotation_t @ position.unsqueeze(2) + rotation_t @ x_position
+
+        loss_dist = torch.mean(
+            self.sq_distance(x_transformed, parameters) ** 2,
+            dim=1,
+        )
+
+        l_output = rotation[:, :3, 2]
+        loss_z = torch.norm(torch.cross(l_output, l_gt, dim=1), dim=1)
+
+        loss_dist_mean = torch.mean(loss_dist)
+        loss_z_mean = torch.mean(loss_z)
+        loss_z_weighted = self.weight * loss_z_mean
+        loss_total = loss_dist_mean + loss_z_weighted
+
+        if torch.isnan(loss_total) or torch.isinf(loss_total):
+            raise ValueError("The loss function is inf or nan.")
+
+        return {
+            "loss_total": loss_total,
+            "loss_dist": loss_dist_mean,
+            "loss_z": loss_z_mean,
+            "loss_z_weighted": loss_z_weighted,
+        }
+
     def forward(self, x, l_gt, output):
         """
         Args:
@@ -18,34 +60,7 @@ class SuperquadricLoss(nn.Module):
         Returns:
             loss (float): Gross and Boult loss
         """
-
-        # network output processing
-        position = output[:, :3]
-        orientation = output[:, 3:7]
-        rotation = quaternions_to_rotation_matrices_torch(orientation)
-        parameters = output[:, 7:]
-
-        # ground-truth point cloud
-        x_position = x[:, :3, :]
-        rotation_t = rotation.permute(0,2,1)
-        x_transformed = -rotation_t@position.unsqueeze(2) + rotation_t@x_position
-
-        # Gross and Boult superquadric loss
-        loss_dist = torch.mean(
-            self.sq_distance(x_transformed, parameters)**2, 
-            dim=1
-        )
-
-        # orientation loss
-        l_output = rotation[:, :3, 2]
-        loss_z = torch.norm(torch.cross(l_output, l_gt, dim=1), dim=1)
-
-        # total loss
-        loss = torch.mean(loss_dist) + self.weight * torch.mean(loss_z)
-        if torch.isnan(loss) or torch.isinf(loss):
-            raise ValueError('The loss function is inf or nan.')
-
-        return loss
+        return self.compute_terms(x, l_gt, output)["loss_total"]
 
     def sq_distance(self, x, parameters):
         

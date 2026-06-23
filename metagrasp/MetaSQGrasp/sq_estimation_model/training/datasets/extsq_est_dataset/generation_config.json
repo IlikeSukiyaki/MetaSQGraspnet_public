@@ -1,0 +1,55 @@
+{
+  "config_mode": "extended_sq",
+  "object_names": [
+    "extended_sq"
+  ],
+  "num_objects": 1000,
+  "num_cams": 16,
+  "num_pnts": 1500,
+  "save_full_pc": true,
+  "save_membership": false,
+  "object_param_config": {
+    "random": true,
+    "a1": {
+      "min": 0.03,
+      "max": 0.14
+    },
+    "a2": {
+      "min": 0.03,
+      "max": 0.14
+    },
+    "a3": {
+      "min": 0.03,
+      "max": 0.14
+    },
+    "e1": {
+      "min": 0.25,
+      "max": 1.6
+    },
+    "e2": {
+      "min": 0.25,
+      "max": 1.6
+    },
+    "k": {
+      "min": -0.65,
+      "max": 0.65
+    },
+    "b": {
+      "min": 0.01,
+      "max": 0.55
+    },
+    "max_axis_ratio": 3.5,
+    "profile_weights": [
+      0.4,
+      0.3,
+      0.2,
+      0.1
+    ],
+    "color": [
+      1,
+      0,
+      0
+    ]
+  },
+  "generated_at_utc": "2026-06-22T10:28:59.966375+00:00"
+}

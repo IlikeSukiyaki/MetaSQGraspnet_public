@@ -89,12 +89,12 @@ python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras --headless \
 
 Optional per-camera scene point maps in lite mode: add `--save_scene_pc`.
 
-Convert episodes to rgbsq_grasp `.npy` samples:
+Convert episodes to estimator `.npy` samples:
 
 ```bash
 python tools/convert_sq_to_npy.py \
   --input datasets/supersq_grasp_data/demo/001 \
-  --output ../../rgbsq_grasp/datasets/isaac_synth/001 \
+  --output sq_estimation_model/training/datasets/isaac_synth/001 \
   --camera both
 ```
 

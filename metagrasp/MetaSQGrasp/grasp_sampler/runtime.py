@@ -20,7 +20,7 @@ import trimesh
 
 from grasp_sampler.database_paths import legacy_models_ifl_roots, resolve_grasp_database_root
 from grasp_sampler.gripper_profiles import ParallelJawProfile, get_profile
-from grasp_sampler.sq_mesh import sample_antipodal_grasps_on_mesh, superquadric_trimesh_cm
+from grasp_sampler.sq_mesh import estimation_trimesh_cm, sample_antipodal_grasps_on_mesh
 
 
 @dataclass(frozen=True)
@@ -445,7 +445,7 @@ def select_best_grasp_on_sq_mesh(
 ) -> GraspSelection | None:
     """Sample and rank Hand-E grasps directly on an estimated superquadric."""
     gripper_profile = get_profile(profile, mesh_root=collision_root)
-    mesh = superquadric_trimesh_cm(sq_parameters, resolution=mesh_resolution)
+    mesh = estimation_trimesh_cm(sq_parameters, resolution=mesh_resolution)
     grasp_dict = sample_antipodal_grasps_on_mesh(
         mesh,
         profile=gripper_profile,

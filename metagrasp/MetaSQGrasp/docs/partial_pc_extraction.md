@@ -132,12 +132,12 @@ python tools/extract_partial_pc.py \
   --color instance
 ```
 
-### 4. Convert to rgbsq_grasp training format
+### 4. Convert to estimator training format
 
 ```bash
 python tools/convert_sq_to_npy.py \
   --input datasets/supersq_grasp_data/001 \
-  --output ../../rgbsq_grasp/datasets/isaac_synth/001 \
+  --output sq_estimation_model/training/datasets/isaac_synth/001 \
   --camera topdown \
   --mask auto
 ```

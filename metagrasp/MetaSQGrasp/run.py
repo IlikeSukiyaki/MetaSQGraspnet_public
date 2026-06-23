@@ -70,8 +70,22 @@ parser.add_argument(
     default=False,
     help="SQ-v0-Data: save per-camera pcd_map.npy (always saved in full profile; optional in lite).",
 )
-parser.add_argument("--sq_config", type=str, default=None, help="SQNet config YAML for supersq_grasp-v0.")
-parser.add_argument("--sq_checkpoint", type=str, default=None, help="SQNet checkpoint for supersq_grasp-v0.")
+parser.add_argument(
+    "--sq_model",
+    type=str,
+    default="sq_esti_model",
+    choices=["sq_esti_model", "extsq_esti_model"],
+    help="SQ estimator used by supersq_grasp-v0.",
+)
+parser.add_argument("--sq_config", type=str, default=None, help="SQ estimator config YAML for supersq_grasp-v0.")
+parser.add_argument("--sq_checkpoint", type=str, default=None, help="SQ estimator checkpoint for supersq_grasp-v0.")
+parser.add_argument("--sq_device", type=str, default=None, help="Device for SQ estimation, e.g. cpu or cuda:0.")
+parser.add_argument(
+    "--sq_num_fitting_points",
+    type=int,
+    default=300,
+    help="Number of points used by SQ estimator preprocessing.",
+)
 parser.add_argument(
     "--sq_camera",
     type=str,

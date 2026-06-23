@@ -22,6 +22,7 @@ class SuperSQPickSm(ClassicalPickSmBase):
         estimator = make_estimator(
             config_path=getattr(args_cli, "sq_config", None),
             checkpoint_path=getattr(args_cli, "sq_checkpoint", None),
+            model_kind=getattr(args_cli, "sq_model", "sq_esti_model"),
             device=getattr(args_cli, "sq_device", None),
             num_fitting_points=getattr(args_cli, "sq_num_fitting_points", 300),
         )
