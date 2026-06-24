@@ -28,13 +28,13 @@ from isaaclab.utils.math import subtract_frame_transforms, quat_mul, combine_fra
 
 from .wp_cfg import *
 from .env_cfg import *
-from isaac_env import AIREnvBase
+from isaac_env import EnvBase
 ##
 # Pre-defined configs
 ##
 
 
-class AIREnvData(AIREnvBase):
+class EnvData(EnvBase):
     def __init__(self, cfg: CellEnvCfg, 
                  render_mode: str | None = None, 
                  **kwargs):

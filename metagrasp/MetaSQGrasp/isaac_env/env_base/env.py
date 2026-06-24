@@ -41,7 +41,7 @@ from isaac_env.utils import *
 ##
 
 
-class AIREnvBase(ManagerBasedRLEnv):
+class EnvBase(ManagerBasedRLEnv):
     def __init__(self, cfg: CellEnvCfg,
                  render_mode: str | None = None, 
                  random_drop_obj: bool = False, 

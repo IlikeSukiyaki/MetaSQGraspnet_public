@@ -1,58 +1,58 @@
 {
   "object_id": "016",
-  "source_dir": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/016",
-  "dest_dir": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaSQGrasp/UR_grasp_database/016",
+  "source_dir": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/models_ifl/016",
+  "dest_dir": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/metagrasp/MetaSQGrasp/UR_grasp_database/016",
   "mode": "copy",
   "generated_at": "2026-06-08T13:26:09.453426+00:00",
   "files": [
     {
-      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/016/.asset_hash",
-      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaSQGrasp/UR_grasp_database/016/.asset_hash",
+      "source": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/models_ifl/016/.asset_hash",
+      "target": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/metagrasp/MetaSQGrasp/UR_grasp_database/016/.asset_hash",
       "status": "copied"
     },
     {
-      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/016/config.yaml",
-      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaSQGrasp/UR_grasp_database/016/config.yaml",
+      "source": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/models_ifl/016/config.yaml",
+      "target": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/metagrasp/MetaSQGrasp/UR_grasp_database/016/config.yaml",
       "status": "copied"
     },
     {
-      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/016/configuration/materials/textures/texture_map.png",
-      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaSQGrasp/UR_grasp_database/016/configuration/materials/textures/texture_map.png",
+      "source": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/models_ifl/016/configuration/materials/textures/texture_map.png",
+      "target": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/metagrasp/MetaSQGrasp/UR_grasp_database/016/configuration/materials/textures/texture_map.png",
       "status": "copied"
     },
     {
-      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/016/texture_map.png",
-      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaSQGrasp/UR_grasp_database/016/texture_map.png",
+      "source": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/models_ifl/016/texture_map.png",
+      "target": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/metagrasp/MetaSQGrasp/UR_grasp_database/016/texture_map.png",
       "status": "copied"
     },
     {
-      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/016/textured.obj",
-      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaSQGrasp/UR_grasp_database/016/textured.obj",
+      "source": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/models_ifl/016/textured.obj",
+      "target": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/metagrasp/MetaSQGrasp/UR_grasp_database/016/textured.obj",
       "status": "copied"
     },
     {
-      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/016/textured.obj.mtl",
-      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaSQGrasp/UR_grasp_database/016/textured.obj.mtl",
+      "source": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/models_ifl/016/textured.obj.mtl",
+      "target": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/metagrasp/MetaSQGrasp/UR_grasp_database/016/textured.obj.mtl",
       "status": "copied"
     },
     {
-      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/016/textured.urdf",
-      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaSQGrasp/UR_grasp_database/016/textured.urdf",
+      "source": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/models_ifl/016/textured.urdf",
+      "target": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/metagrasp/MetaSQGrasp/UR_grasp_database/016/textured.urdf",
       "status": "copied"
     },
     {
-      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/016/textured_simplified.obj",
-      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaSQGrasp/UR_grasp_database/016/textured_simplified.obj",
+      "source": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/models_ifl/016/textured_simplified.obj",
+      "target": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/metagrasp/MetaSQGrasp/UR_grasp_database/016/textured_simplified.obj",
       "status": "copied"
     },
     {
-      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/016/textured_simplified.obj.mtl",
-      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaSQGrasp/UR_grasp_database/016/textured_simplified.obj.mtl",
+      "source": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/models_ifl/016/textured_simplified.obj.mtl",
+      "target": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/metagrasp/MetaSQGrasp/UR_grasp_database/016/textured_simplified.obj.mtl",
       "status": "copied"
     },
     {
-      "source": "/home/sustech/\u684c\u9762/DSQNet/models_ifl/016/textures/texture_map.png",
-      "target": "/home/sustech/\u684c\u9762/DSQNet/metagrasp/MetaSQGrasp/UR_grasp_database/016/textures/texture_map.png",
+      "source": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/models_ifl/016/textures/texture_map.png",
+      "target": "/home/sustech/\u684c\u9762/MetaSQGrasp_public/metagrasp/MetaSQGrasp/UR_grasp_database/016/textures/texture_map.png",
       "status": "copied"
     }
   ]

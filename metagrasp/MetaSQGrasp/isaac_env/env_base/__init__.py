@@ -7,8 +7,8 @@ import os
 
 from isaac_env.utils import *
 from .env_cfg import *
-from .sim import AIRPickSm
-from .env import AIREnvBase
+from .sim import PickSm
+from .env import EnvBase
 from .element_cfg import *
 
-__all__ = ["AIRPickSm", "AIREnvBase"]
+__all__ = ["PickSm", "EnvBase"]

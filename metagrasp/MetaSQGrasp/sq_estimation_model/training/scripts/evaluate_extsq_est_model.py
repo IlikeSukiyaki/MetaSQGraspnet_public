@@ -17,7 +17,7 @@ if str(TRAINING_ROOT) not in sys.path:
 
 from data_loaders.manifest import filter_entries, get_split_entries, load_manifest
 from extsq_est_inference import load_extsq_model, load_sample, recognize_extsq
-from geometry.primitives import DeformableSuperquadric
+from geometry.primitives import ExtendedSuperquadric
 
 
 PARAMETER_KEYS = ("a1", "a2", "a3", "e1", "e2", "k", "b", "cos_alpha", "sin_alpha")
@@ -36,10 +36,10 @@ def parameter_errors(predicted: dict[str, float], gt: dict | None) -> dict[str, 
 
 def write_meshes(export_dir: Path, stem: str, result: dict, gt: dict | None) -> None:
     export_dir.mkdir(parents=True, exist_ok=True)
-    pred_mesh = DeformableSuperquadric(result["SE3"], result["parameters"]).mesh
+    pred_mesh = ExtendedSuperquadric(result["SE3"], result["parameters"]).mesh
     o3d.io.write_triangle_mesh(str(export_dir / f"{stem}_pred.ply"), pred_mesh)
     if gt:
-        gt_mesh = DeformableSuperquadric(gt["SE3"], gt["parameters"]).mesh
+        gt_mesh = ExtendedSuperquadric(gt["SE3"], gt["parameters"]).mesh
         o3d.io.write_triangle_mesh(str(export_dir / f"{stem}_gt.ply"), gt_mesh)
 
 

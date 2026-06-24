@@ -12,7 +12,7 @@ from grasp_sampler.database_paths import (
     normalize_obj_id,
     resolve_grasp_database_root,
 )
-from isaac_env.air_env_base.element_cfg import *  # noqa: F403
+from isaac_env.env_base.element_cfg import *  # noqa: F403
 from isaac_env.gripper_task_configs.robotiq_2f85 import apply_to_element_cfg
 
 

@@ -28,7 +28,7 @@ from isaaclab.sensors.frame_transformer.frame_transformer_cfg import (
 from isaaclab.utils import configclass
 from isaaclab.utils.math import *
 
-from isaac_env.air_env_base.env_cfg import *
+from isaac_env.env_base.env_cfg import *
 from .element_cfg import *
 
 
@@ -136,7 +136,6 @@ class ActionsCfg:
         open_command_expr=gripper_joint_cfg[ROBOT_NAME]["open"],
         close_command_expr=gripper_joint_cfg[ROBOT_NAME]["close"],
     )
-
 
 @configclass
 class ObservationsCfg:

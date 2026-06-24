@@ -23,7 +23,9 @@ sq_estimation_model/
 
 ## Environment
 
-Use the same conda env as `rgbsq_grasp` (Python 3.10 + PyTorch), then install deps:
+Use the separate **`rgbsq_grasp`** conda env for training (not `metagrasp`). Simulation versions are documented in [docs/environment_versions.md](../../docs/environment_versions.md).
+
+Use the same conda env as legacy `rgbsq_grasp` (Python 3.10+ + PyTorch 2.7+ recommended), then install deps:
 
 ```bash
 conda activate rgbsq_grasp
@@ -96,8 +98,8 @@ python train_tensorboard.py --config configs/extsq_esti_model_config_smoke.yml -
 Checkpoints and copied configs are saved under:
 
 ```text
-train_results_tensorboard/sq_esti_model_config/<run>/model_best.pkl
-train_results_tensorboard/extsq_esti_model_config/<run>/model_best.pkl
+train_results_tensorboard/sq_esti_model_config/<run>/sq_esti_model_best.pkl
+train_results_tensorboard/extsq_esti_model_config/<run>/extsq_esti_model_best.pkl
 train_results_tensorboard/<config>/<run>/tensorboard/
 ```
 
@@ -109,9 +111,11 @@ train_results_tensorboard/<config>/<run>/tensorboard/
 Checkpoints are saved under:
 
 ```text
-train_results/sq_esti_model_config/<run>/model_best.pkl
-train_results/extsq_esti_model_config/<run>/model_best.pkl
+train_results/sq_esti_model_config/<run>/sq_esti_model_best.pkl
+train_results/extsq_esti_model_config/<run>/extsq_esti_model_best.pkl
 ```
+
+Best-checkpoint filenames include the model architecture (`sq_esti_model_best.pkl`, `extsq_esti_model_best.pkl`).
 
 ## Smoke tests
 
@@ -214,7 +218,7 @@ This physically copies `.npy` files, renames class folders/files to stable IDs, 
 ```bash
 python scripts/evaluate_extsq_est_model.py \
   --config configs/extsq_esti_model_config.yml \
-  --checkpoint train_results/extsq_esti_model_config/extsq_esti_model_full/model_best.pkl \
+  --checkpoint train_results/extsq_esti_model_config/extsq_esti_model_full/extsq_esti_model_best.pkl \
   --dataset datasets/extsq_est_dataset \
   --split test \
   --max-samples 32 \
@@ -228,7 +232,7 @@ from inference import load_recognition_model, predict_parameters
 
 model, cfg = load_recognition_model(
     "configs/sq_esti_model_config.yml",
-    "train_results/sq_esti_model_config/my_run/model_best.pkl",
+    "train_results/sq_esti_model_config/my_run/sq_esti_model_best.pkl",
     device="cuda:0",
 )
 params = predict_parameters(model, point_cloud_xyz, num_points=300)

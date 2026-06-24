@@ -5,7 +5,7 @@ from __future__ import annotations
 import torch
 import warp as wp
 
-from isaac_env import AIREnvBase
+from isaac_env import EnvBase
 
 from .element_cfg import N_MULTIPLE_CAM, OBJ_LABLE, SQ_DATA_ROOT, TOPDOWN_CAMERA_HEIGHT
 from .env_cfg import CellEnvCfg
@@ -13,7 +13,7 @@ from .export import save_scene_snapshot
 from .wp_cfg import infer_state_machine_data
 
 
-class SQEnvData(AIREnvBase):
+class SQEnvData(EnvBase):
     def __init__(
         self,
         cfg: CellEnvCfg,

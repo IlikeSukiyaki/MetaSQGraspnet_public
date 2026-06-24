@@ -122,7 +122,7 @@ class PrimitiveDataset(torch.utils.data.Dataset):
             "torus": {"param3"},
             "superquadric": {"param4", "param5"},
             "extended_sq": {"param4", "param5", "param6", "param8", "param9"},
-            "deformable_superquadric": {"param4", "param5", "param6", "param8", "param9"},
+            "deformable_superquadric": {"param4", "param5", "param6", "param8", "param9"},  # legacy alias
         }
         skip_keys = dimensionless_keys.get(shape_type, set())
         for idx, (key, value) in enumerate(shape_parameters.items()):

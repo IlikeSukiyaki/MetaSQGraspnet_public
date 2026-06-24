@@ -47,7 +47,7 @@ flowchart LR
 
 ### `element_cfg.py`
 
-Scene-level constants inherited from `air_env_base.element_cfg`, narrowed for SQ estimation smoke tests.
+Scene-level constants inherited from `env_base.element_cfg`, narrowed for SQ estimation smoke tests.
 
 | Item | Value / role |
 |------|----------------|
@@ -122,7 +122,7 @@ Dual-camera capture functions (stacked over `N_MULTIPLE_CAM`):
 
 ### `env.py` — `SQEnvData`
 
-Runtime environment class extending `AIREnvBase`.
+Runtime environment class extending `EnvBase`.
 
 **Constructor kwargs:**
 
@@ -213,7 +213,7 @@ Curated demo samples: [`datasets/supersq_grasp_data/demo/`](../../datasets/super
 
 ### `wp_cfg.py`
 
-Re-exports `infer_state_machine_data` from `air_env_data.wp_cfg` — the Warp GPU kernel that drives the data-collection state machine (reach stable pose → hold → advance episode).
+Re-exports `infer_state_machine_data` from `env_data.wp_cfg` — the Warp GPU kernel that drives the data-collection state machine (reach stable pose → hold → advance episode).
 
 ---
 
@@ -222,7 +222,7 @@ Re-exports `infer_state_machine_data` from `air_env_data.wp_cfg` — the Warp GP
 From `MetaSQGrasp/`:
 
 ```bash
-conda activate env_isaaclab
+conda activate metagrasp
 
 python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras --headless \
   --save_camera_data \
@@ -299,7 +299,7 @@ See also: [`docs/multi_object_data_collection.md`](../../docs/multi_object_data_
 
 ## Design notes
 
-- **Inherits AIR base** — robot, table, on-hand camera, controller, and most MDP terms come from `air_env_base` / `air_env_data`.
+- **Inherits shared base** — robot, table, on-hand camera, controller, and most MDP terms come from `env_base` / `env_data`.
 - **Multi-object pool** — default `DEMO_OBJ_IDS`; override with `--obj_ids`; `--scene_objects K` places K distinct objects on the table per episode (one is the grasp target, others are distractors for occlusion testing).
 - **Dual-camera observations** — all image/depth/seg/pcd tensors are shaped `(num_envs, num_cameras, ...)`.
 - **Degenerate instance masks** — current single-object data may label the full image as one instance ID; partial PC export uses mesh-bbox fallback (`mask=auto`). Multi-object scenes (`--scene_objects > 1`) rely on per-object instance labels and do not use mesh-bbox fallback.

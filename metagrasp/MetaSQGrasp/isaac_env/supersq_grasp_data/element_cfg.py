@@ -22,7 +22,7 @@ from grasp_sampler.database_paths import (
     normalize_obj_id,
     resolve_grasp_database_root,
 )
-from isaac_env.air_env_base.element_cfg import *  # noqa: F403
+from isaac_env.env_base.element_cfg import *  # noqa: F403
 
 
 N_MULTIPLE_CAM = 2

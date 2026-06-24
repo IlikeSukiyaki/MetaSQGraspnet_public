@@ -1,3 +1,3 @@
-from .air_env_base.env import AIREnvBase
+from .env_base.env import EnvBase
 
-__all__ = ["AIREnvBase"]
+__all__ = ["EnvBase"]

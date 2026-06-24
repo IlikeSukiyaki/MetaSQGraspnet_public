@@ -4,11 +4,11 @@
 # Output is written next to each URDF:
 #   <models_root>/<id>/orbit_obj.usd
 #
-# MetaSQGrasp/models/models_ifl is a symlink to DSQNet/models_ifl, so converting
+# MetaSQGrasp/models/models_ifl is a symlink to <workspace_root>/models_ifl, so converting
 # the corpus once is enough for RL / classical / SQ tasks.
 #
 # Note: urdf_converter.py was written for Isaac Lab 1.4 + Isaac Sim 4.2. If conversion
-# fails on newer stacks, activate the env_isaaclab conda env recommended in README.
+# fails on newer stacks, activate the metagrasp conda env recommended in README.
 #
 # Usage:
 #   ./tools/convert_models_ifl_to_usd.sh
@@ -21,9 +21,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+WORKSPACE_ROOT="$(cd "${PROJECT_ROOT}/../.." && pwd)"
 
-MODELS_ROOT="${MODELS_ROOT:-/home/sustech/桌面/DSQNet/models_ifl}"
-CONDA_ENV="${CONDA_ENV:-env_isaaclab}"
+MODELS_ROOT="${MODELS_ROOT:-${WORKSPACE_ROOT}/models_ifl}"
+CONDA_ENV="${CONDA_ENV:-metagrasp}"
 FORCE=0
 BATCH=0
 IDS=""

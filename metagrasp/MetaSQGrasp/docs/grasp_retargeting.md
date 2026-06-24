@@ -223,7 +223,7 @@ python grasp_sampler/visualize_grasp_object.py \
 When URDF text and code disagree, measure the loaded asset:
 
 ```bash
-conda activate env_isaaclab
+conda activate metagrasp
 
 PYTHONUNBUFFERED=1 python tools/measure_hande_end_frame.py \
   --enable_cameras --headless 2>&1 | rg "dot_finger|dot_finger_mid|measured"
@@ -315,7 +315,7 @@ Legacy Franka tasks retreat along EE **+Y** in their own `wp_cfg.py`. Do not mix
 | `grasp_sampler/runtime.py` | Object pose compose, collision filter, `select_best_grasp()` |
 | `isaac_env/object_env_classical/env.py` | Runtime hook: selects grasp, logs `approach_robot` |
 | `isaac_env/object_env_classical/wp_cfg.py` | Pre-grasp retreat / interpolated approach along EE +Y |
-| `isaac_env/air_env_base/env.py` | `_get_obj_pose()`, `_get_ee_pose()` frame sources |
+| `isaac_env/env_base/env.py` | `_get_obj_pose()`, `_get_ee_pose()` frame sources |
 | `grasp_sampler/visualize_grasp_object.py` | Offline `--frame ee` vs `--frame sampler` |
 | `tools/check_hande_frame.py` | Fast synthetic remap test |
 | `tools/verify_classical_grasp_frame.py` | HDF5 + spawn pose alignment test |

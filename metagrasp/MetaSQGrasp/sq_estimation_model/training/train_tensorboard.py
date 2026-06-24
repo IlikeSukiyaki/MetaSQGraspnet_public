@@ -28,6 +28,7 @@ from metrics.meter import averageMeter
 from optimizers import get_optimizer
 from registry.models import get_model
 from utils import save_yaml
+from utils.checkpoints import best_checkpoint_name
 
 
 def _has_compute_terms(loss_fn):
@@ -92,9 +93,9 @@ def _log_split_losses(writer, meters, split, global_step):
     )
 
 
-def save_model(model, logdir, best=False, i_iter=None, epoch=None):
+def save_model(model, logdir, best=False, i_iter=None, epoch=None, model_arch="sq_esti_model"):
     if best:
-        pkl_name = "model_best.pkl"
+        pkl_name = best_checkpoint_name(model_arch)
     elif i_iter is not None:
         pkl_name = f"model_iter_{i_iter}.pkl"
     else:
@@ -112,6 +113,7 @@ def train_recognition(model, optimizer, dataloaders, loss_fn, cfg, device, write
 
     clip_grad = training_cfg.get("clip_grad", 1)
     is_extsq = cfg["model"]["arch"] == "extsq_esti_model"
+    model_arch = cfg["model"]["arch"]
     best_val_loss = np.inf
     iteration = 0
     meters = _make_meters()
@@ -186,7 +188,7 @@ def train_recognition(model, optimizer, dataloaders, loss_fn, cfg, device, write
 
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
-                    save_model(model, logdir, best=True, i_iter=iteration)
+                    save_model(model, logdir, best=True, i_iter=iteration, model_arch=model_arch)
                     writer.add_scalar("validation/best_loss", best_val_loss, iteration)
                     print(
                         f"[Validation] Iter [{iteration:d}] best model saved "

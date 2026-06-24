@@ -30,7 +30,7 @@ Collect all demo episodes:
 
 ```bash
 cd metagrasp/MetaSQGrasp
-conda activate env_isaaclab
+conda activate metagrasp
 bash tools/collect_demo_dataset.sh datasets/supersq_grasp_data/demo
 ```
 
@@ -68,7 +68,7 @@ python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras --headless \
 
 ```bash
 cd metagrasp/MetaSQGrasp
-conda activate env_isaaclab
+conda activate metagrasp
 python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras --headless \
   --save_camera_data \
   --export_profile full \

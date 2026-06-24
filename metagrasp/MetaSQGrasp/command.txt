@@ -1,4 +1,4 @@
-cd /home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp
+cd /home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp
 conda activate metagrasp
 python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras \
   --save_camera_data \
@@ -77,7 +77,7 @@ python tools/visualize_partial_pc.py \
 
 conda activate metagrasp
 python tools/setup_ur_grasp_database.py \
-  --source /home/sustech/桌面/DSQNet/models_ifl \
+  --source /home/sustech/桌面/MetaSQGrasp_public/models_ifl \
   --objects 000,001,004,011 \
   --overwrite
 
@@ -89,7 +89,7 @@ python tools/generate_object_grasps.py \
   --max_grasps 2000 \
   --pool_size 1
 
-conda activate env_isaaclab
+conda activate metagrasp
 python urdf_converter.py --input UR_grasp_database/000/textured.urdf --headless
 python urdf_converter.py --input UR_grasp_database/001/textured.urdf --headless
 python urdf_converter.py --input UR_grasp_database/004/textured.urdf --headless

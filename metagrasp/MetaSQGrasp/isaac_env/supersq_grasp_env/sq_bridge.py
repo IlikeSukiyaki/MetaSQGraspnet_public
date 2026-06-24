@@ -43,8 +43,8 @@ def default_sq_config(model_kind: EstimatorKind = "sq_esti_model") -> Path:
 
 def default_sq_checkpoint(model_kind: EstimatorKind = "sq_esti_model") -> Path:
     if model_kind == "extsq_esti_model":
-        return _pretrained_root() / "extsq_esti_model" / "model_best.pkl"
-    return _pretrained_root() / "sq_esti_model" / "model_best.pkl"
+        return _pretrained_root() / "extsq_esti_model" / "extsq_esti_model_best.pkl"
+    return _pretrained_root() / "sq_esti_model" / "sq_esti_model_best.pkl"
 
 
 def resolve_device(device: str | int | None = None) -> str:

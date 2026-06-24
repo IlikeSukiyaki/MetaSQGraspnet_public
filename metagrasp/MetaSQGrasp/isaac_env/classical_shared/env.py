@@ -7,10 +7,10 @@ import warp as wp
 
 from grasp_sampler import runtime as grasp_runtime
 from grasp_sampler.gripper_profiles import get_profile
-from isaac_env import AIREnvBase
+from isaac_env import EnvBase
 
 
-class ObjectEnvClassicalBase(AIREnvBase):
+class ObjectEnvClassicalBase(EnvBase):
     """Base environment wired by task-specific element/env/wp modules."""
 
     element_cfg = None

@@ -197,14 +197,14 @@ class Superquadric(Base_primitives):
 
 		self.transform_mesh()
 
-class DeformableSuperquadric(Base_primitives):
+class ExtendedSuperquadric(Base_primitives):
 	def __init__(self, SE3, parameters, resolution=10, color=[0.8, 0.8, 0.8], collisionBox=False):
-		self.type = 'deformable_superquadric'
+		self.type = 'extended_sq'
 		self.SE3 = SE3
 		self.parameters = parameters
 		self.resolution = resolution
 		self.color = color
-		self.mesh = mesh_deformable_superquadric(self.parameters, self.SE3, resolution=self.resolution)
+		self.mesh = mesh_extended_superquadric(self.parameters, self.SE3, resolution=self.resolution)
 
 		if collisionBox:
 			fcl = _get_fcl()
@@ -247,7 +247,7 @@ def mesh_superquadric(parameters, SE3, resolution=10):
 
 	return mesh
 
-def mesh_deformable_superquadric(parameters, SE3, resolution=10):
+def mesh_extended_superquadric(parameters, SE3, resolution=10):
 	
 	assert SE3.shape == (4, 4)
 
@@ -321,8 +321,8 @@ gen_primitive = {
 	"cylinder": Cylinder,
 	"torus": Torus,
 	"superquadric": Superquadric,
-	"extended_sq": DeformableSuperquadric,
-	"deformable_superquadric": DeformableSuperquadric,
+	"extended_sq": ExtendedSuperquadric,
+	"deformable_superquadric": ExtendedSuperquadric,
 }
 
 gen_parameter = {
@@ -334,4 +334,8 @@ gen_parameter = {
 	"extended_sq": ['a1', 'a2', 'a3', 'e1', 'e2', 'k', 'b', 'cos_alpha', 'sin_alpha'],
 	"deformable_superquadric": ['a1', 'a2', 'a3', 'e1', 'e2', 'k', 'b', 'cos_alpha', 'sin_alpha'],
 }
+
+# Legacy aliases retained for older imports and persisted dataset type strings.
+DeformableSuperquadric = ExtendedSuperquadric
+mesh_deformable_superquadric = mesh_extended_superquadric
 

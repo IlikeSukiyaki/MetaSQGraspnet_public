@@ -34,7 +34,7 @@ runtime loads `textured.obj.hand_e.hdf5`.
 **Verified smoke-test objects (2026-06):** `000`, `001`, `004`, `011`.
 
 The full IFL corpus lives outside this folder, typically at
-`/home/sustech/桌面/DSQNet/models_ifl`. Seed new IDs with
+`/home/sustech/桌面/MetaSQGrasp_public/models_ifl`. Seed new IDs with
 `tools/setup_ur_grasp_database.py`.
 
 **Full workflow:** [docs/ur_grasp_database_workflow.md](../docs/ur_grasp_database_workflow.md)
