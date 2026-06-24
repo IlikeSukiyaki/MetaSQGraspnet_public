@@ -2,7 +2,7 @@ import gymnasium as gym
 import torch
 
 import isaaclab_tasks  # noqa: F401
-from isaac_env.air_env_base.sim import AIRPickSm
+from isaac_env.env_base.sim import PickSm
 from isaaclab_tasks.utils.parse_cfg import parse_env_cfg
 
 from . import element_cfg as sq_element_cfg
@@ -10,7 +10,7 @@ from . import env_cfg as sq_env_cfg
 from .element_cfg import NUM_OBJS, OBJ_LABLE, TOPDOWN_CAMERA_HEIGHT, make_topdown_camera_cfg
 
 
-class SQPickSmData(AIRPickSm):
+class SQPickSmData(PickSm):
     def __init__(self, args_cli):
         cli_obj_ids = getattr(args_cli, "obj_ids", None)
         if cli_obj_ids:

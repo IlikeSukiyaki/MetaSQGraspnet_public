@@ -8,10 +8,10 @@ Example YAML configs are tracked; `.pkl` weights stay local.
 pretrained/
 ├── sq_esti_model/
 │   ├── sq_esti_model_config.yml
-│   └── model_best.pkl              # local only
+│   └── sq_esti_model_best.pkl      # local only
 └── extsq_esti_model/
     ├── extsq_esti_model_config.yml
-    └── model_best.pkl              # local only
+    └── extsq_esti_model_best.pkl   # local only
 ```
 
 ## How to populate

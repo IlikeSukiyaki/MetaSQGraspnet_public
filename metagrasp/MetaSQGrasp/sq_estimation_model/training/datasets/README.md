@@ -7,13 +7,11 @@ Large point-cloud datasets live here. Git tracks only JSON/CSV manifests and gen
 ```text
 datasets/
 ├── primitive_dataset/
-│   ├── dataset_manifest.json       # tracked
-│   └── primitive_class_map.json    # tracked
+│   └── dataset_manifest.json       # tracked
 ├── object_dataset/
 ├── evaluation_dataset/
 └── extsq_est_dataset/              # extended superquadrics
     ├── dataset_manifest.json       # tracked
-    ├── extsq_est_class_map.json    # tracked
     ├── generation_config.json      # tracked
     ├── instance_manifest.csv       # tracked
     └── extsq_est_001/              # local point clouds (ignored)

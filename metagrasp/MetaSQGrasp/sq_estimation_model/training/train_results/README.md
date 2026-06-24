@@ -7,7 +7,7 @@ Checkpoints and logs from `train.py` / `train_tensorboard.py` are written here.
 ```text
 train_results/
 └── <run_name>/
-    ├── model_best.pkl
+    ├── sq_esti_model_best.pkl
     ├── model_iter_*.pkl
     └── <config_copy>.yml
 ```

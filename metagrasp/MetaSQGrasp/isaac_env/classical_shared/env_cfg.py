@@ -21,7 +21,7 @@ from isaaclab.sensors.frame_transformer import OffsetCfg
 from isaaclab.sensors.frame_transformer.frame_transformer_cfg import FrameTransformerCfg
 from isaaclab.utils import configclass
 
-from isaac_env.air_env_base.env_cfg import (
+from isaac_env.env_base.env_cfg import (
     get_camera_pose,
     grasp_success_compute,
     gripper_pose_capture,

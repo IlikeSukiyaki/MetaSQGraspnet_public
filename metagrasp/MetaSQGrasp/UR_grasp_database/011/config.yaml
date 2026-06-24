@@ -1,5 +1,5 @@
-asset_path: "/home/sustech/\u684C\u9762/DSQNet/metagrasp/MetaSQGrasp/UR_grasp_database/011/textured.urdf"
-usd_dir: "/home/sustech/\u684C\u9762/DSQNet/metagrasp/MetaSQGrasp/UR_grasp_database/011"
+asset_path: "/home/sustech/\u684C\u9762/MetaSQGrasp_public/metagrasp/MetaSQGrasp/UR_grasp_database/011/textured.urdf"
+usd_dir: "/home/sustech/\u684C\u9762/MetaSQGrasp_public/metagrasp/MetaSQGrasp/UR_grasp_database/011"
 usd_file_name: orbit_obj.usd
 force_usd_conversion: true
 make_instanceable: false

@@ -5,18 +5,20 @@ import numpy as np
 import open3d as o3d
 import torch
 
-from geometry.primitives import DeformableSuperquadric, Superquadric, gen_parameter, gen_primitive
+from geometry.primitives import ExtendedSuperquadric, Superquadric, gen_parameter, gen_primitive
 from geometry.utils_numpy import define_SE3, quaternions_to_rotation_matrices
 from losses import get_loss
 from metrics import averageMeter
+from utils.checkpoints import best_checkpoint_name
 
 
 class RecognitionTrainer:
     """Trainer for iterative SQ / extended SQ estimation model training."""
 
-    def __init__(self, training_cfg, device):
+    def __init__(self, training_cfg, device, model_arch="sq_esti_model"):
         self.cfg = training_cfg
         self.device = device
+        self.model_arch = model_arch
         self.time_meter = averageMeter()
         self.loss_meter = {"train": averageMeter(), "val": averageMeter()}
         self.loss = get_loss(training_cfg, device=device)
@@ -129,7 +131,7 @@ class RecognitionTrainer:
 
     def save_model(self, model, logdir, best=False, i_iter=None, epoch=None):
         if best:
-            pkl_name = "model_best.pkl"
+            pkl_name = best_checkpoint_name(self.model_arch)
         elif i_iter is not None:
             pkl_name = f"model_iter_{i_iter}.pkl"
         else:
@@ -169,7 +171,7 @@ def mesh_from_prediction(shape):
             parameters["b"] = shape_parameters[idx, 6]
             parameters["cos_alpha"] = shape_parameters[idx, 7]
             parameters["sin_alpha"] = shape_parameters[idx, 8]
-            mesh = DeformableSuperquadric(se3, parameters).mesh
+            mesh = ExtendedSuperquadric(se3, parameters).mesh
         else:
             mesh = Superquadric(se3, parameters).mesh
         meshes.append(mesh)

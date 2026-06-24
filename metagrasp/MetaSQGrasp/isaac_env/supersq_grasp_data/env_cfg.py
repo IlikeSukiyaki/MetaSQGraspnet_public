@@ -28,7 +28,7 @@ from isaaclab.sensors.frame_transformer.frame_transformer_cfg import (
 from isaaclab.utils import configclass
 from isaaclab.utils.math import *
 
-from isaac_env.air_env_base.env_cfg import *
+from isaac_env.env_base.env_cfg import *
 from .element_cfg import *
 
 

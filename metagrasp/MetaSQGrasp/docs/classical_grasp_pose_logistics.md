@@ -23,7 +23,7 @@ python tools/generate_object_grasps.py \
   --max_grasps 2000 \
   --pool_size 1
 
-conda activate env_isaaclab
+conda activate metagrasp
 python urdf_converter.py \
   --input UR_grasp_database/011/textured.urdf \
   --headless
@@ -78,7 +78,7 @@ All runtime grasp math assumes **one consistent frame: robot base** (`ur10e_hand
 
 ### Object pose source
 
-[`isaac_env/air_env_base/env.py`](../isaac_env/air_env_base/env.py):
+[`isaac_env/env_base/env.py`](../isaac_env/env_base/env.py):
 
 ```python
 _get_obj_pose()  # object_link_pose_w transformed into robot-base frame
@@ -96,7 +96,7 @@ This must match the frame of the grasp command sent to the IK controller.
 
 ### Table / desk reference
 
-`desk_center` in [`isaac_env/air_env_base/element_cfg.py`](../isaac_env/air_env_base/element_cfg.py) is already in **robot-base frame** (same as object pose). The collision scene in [`grasp_sampler/runtime.py`](../grasp_sampler/runtime.py) places the table top at `desk_center.z`.
+`desk_center` in [`isaac_env/env_base/element_cfg.py`](../isaac_env/env_base/element_cfg.py) is already in **robot-base frame** (same as object pose). The collision scene in [`grasp_sampler/runtime.py`](../grasp_sampler/runtime.py) places the table top at `desk_center.z`.
 
 Do **not** subtract `robot_root_pos` again when building the collision scene.
 
@@ -328,7 +328,7 @@ Edit [`isaac_env/object_env_classical/element_cfg.py`](../isaac_env/object_env_c
 | `CLASSICAL_OBJ_POSE_OFFSET` | `(0.75, 0.20, 0.08)` | Fixed spawn offset on table |
 | `CLASSICAL_OBJ_ORIENTATION_WXYZ` | `(1, 0, 0, 0)` | Upright spawn orientation |
 
-Robot / scene constants live in [`isaac_env/air_env_base/element_cfg.py`](../isaac_env/air_env_base/element_cfg.py):
+Robot / scene constants live in [`isaac_env/env_base/element_cfg.py`](../isaac_env/env_base/element_cfg.py):
 
 | Variable | Typical value | Purpose |
 |----------|---------------|---------|
@@ -407,7 +407,7 @@ Stop limits:
 | `isaac_env/object_env_classical/env_cfg.py` | Fixed object reset, scene/events |
 | `isaac_env/object_env_classical/element_cfg.py` | Object ID, spawn pose, tuning constants |
 | `isaac_env/object_env_classical/wp_cfg.py` | Pick state machine (reach/approach/grasp/lift) |
-| `isaac_env/air_env_base/env.py` | `_get_obj_pose`, `_get_ee_pose`, IK step |
+| `isaac_env/env_base/env.py` | `_get_obj_pose`, `_get_ee_pose`, IK step |
 
 ---
 
@@ -416,5 +416,5 @@ Stop limits:
 | Task | Grasp source |
 |------|--------------|
 | `object-v0-Classical` | HDF5 + Hand-E scene filter (this document) |
-| `AIR-v0-Grasp` | Remote agent or vision demo |
-| `AIR-v0-Data` | Vision demo / optional HDF5 |
+| `SQ-v0-Data` | SQ dataset export with dual-camera snapshots |
+| `supersq_grasp-v0` | SQ-estimated grasp execution |

@@ -17,7 +17,7 @@ ArrayLike = Union[np.ndarray, list, tuple]
 PathLike = Union[str, Path]
 
 DEFAULT_CONFIG = "pretrained/extsq_esti_model/extsq_esti_model_config.yml"
-DEFAULT_CHECKPOINT = "pretrained/extsq_esti_model/model_best.pkl"
+DEFAULT_CHECKPOINT = "pretrained/extsq_esti_model/extsq_esti_model_best.pkl"
 REQUIRED_PARAM_KEYS = ("a1", "a2", "a3", "e1", "e2", "k", "b", "cos_alpha", "sin_alpha")
 
 
@@ -133,4 +133,5 @@ def load_extsq_model(
     checkpoint_path: PathLike = DEFAULT_CHECKPOINT,
     device: Union[str, int] = "cuda:0",
 ) -> tuple[torch.nn.Module, object]:
-    return load_recognition_model(config_path, checkpoint_path, device=resolve_device(device))
+    resolved_checkpoint = Path(checkpoint_path).expanduser().resolve()
+    return load_recognition_model(config_path, resolved_checkpoint, device=resolve_device(device))

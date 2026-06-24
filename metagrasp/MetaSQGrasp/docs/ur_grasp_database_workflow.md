@@ -14,7 +14,7 @@
 
 | 路径 | 用途 |
 |------|------|
-| `/home/sustech/桌面/DSQNet/models_ifl/` | 完整 IFL 物体语料（上游只读源） |
+| `/home/sustech/桌面/MetaSQGrasp_public/models_ifl/` | 完整 IFL 物体语料（上游只读源） |
 | `metagrasp/MetaSQGrasp/UR_grasp_database/` | UR10e + Hand-E 测试用 curated 子集 |
 
 **当前已验证对象：** `000`, `001`, `004`, `011`（2026-06 smoke test 成功）。
@@ -54,12 +54,12 @@ UR_grasp_database/<id>/
 | 步骤 | Conda 环境 | 用途 |
 |------|------------|------|
 | 拷贝 / 生成 HDF5 / 可视化 | `metagrasp` | 离线 antipodal 采样 |
-| URDF → USD / Isaac 运行 | `env_isaaclab` | Isaac Lab 1.4 + Isaac Sim 4.2 |
+| URDF → USD / Isaac 运行 | `metagrasp` | Isaac Lab **0.47.2** + Isaac Sim **5.1.0**（见 [environment_versions.md](./environment_versions.md)） |
 
 所有命令默认在仓库根目录执行：
 
 ```bash
-cd /home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp
+cd /home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp
 ```
 
 ---
@@ -74,7 +74,7 @@ cd /home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp
 conda activate metagrasp
 
 python tools/setup_ur_grasp_database.py \
-  --source /home/sustech/桌面/DSQNet/models_ifl \
+  --source /home/sustech/桌面/MetaSQGrasp_public/models_ifl \
   --objects 000,001,004,011 \
   --overwrite
 ```
@@ -83,7 +83,7 @@ python tools/setup_ur_grasp_database.py \
 
 ```bash
 python tools/setup_ur_grasp_database.py \
-  --source /home/sustech/桌面/DSQNet/models_ifl \
+  --source /home/sustech/桌面/MetaSQGrasp_public/models_ifl \
   --objects 000,001,004,011 \
   --symlink --overwrite
 ```
@@ -126,10 +126,10 @@ python tools/check_hande_frame.py
 
 ### Step 3 — URDF 转 physics USD
 
-需要 `env_isaaclab`（Isaac Lab 1.4）。每个对象执行一次：
+需要 `metagrasp`（Isaac Lab 0.47 + Isaac Sim 5.1）。每个对象执行一次：
 
 ```bash
-conda activate env_isaaclab
+conda activate metagrasp
 
 python urdf_converter.py --input UR_grasp_database/000/textured.urdf --headless
 python urdf_converter.py --input UR_grasp_database/001/textured.urdf --headless
@@ -197,7 +197,7 @@ PY
 ### Step 6 — Isaac 仿真 smoke test
 
 ```bash
-conda activate env_isaaclab
+conda activate metagrasp
 
 # 单对象
 python run.py --task object-v0-Classical \
@@ -264,7 +264,7 @@ Hand-E 坐标系修复摘要：
 | 只有旧版 `textured.obj.hdf5` | 用 `--gripper_profile hand_e` 重新生成 |
 | `016` 无抓取 | 物体过宽；可试 2F85 任务或换物体 |
 | 执行仍偏 ~90° | 跑 `tools/check_hande_frame.py` + Step 6 |
-| `urdf_converter` 失败 | 使用 Isaac Lab 1.4 / Isaac Sim 4.2 的 `env_isaaclab` |
+| `urdf_converter` 失败 | 见 [environment_versions.md](./environment_versions.md)；可改用已转换的 `orbit_obj.usd` |
 
 ---
 

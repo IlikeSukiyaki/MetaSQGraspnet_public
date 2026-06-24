@@ -6,5 +6,5 @@
 """Configuration for a simple Cartpole robot
 """
 
-from isaac_env.air_env_base.element_cfg import *
+from isaac_env.env_base.element_cfg import *
 

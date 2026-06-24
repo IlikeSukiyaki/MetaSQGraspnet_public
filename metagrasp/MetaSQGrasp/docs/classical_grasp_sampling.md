@@ -46,7 +46,7 @@ flowchart LR
 ## Prerequisites
 
 - Conda env **`metagrasp`** — grasp generation and visualization
-- Conda env **`env_isaaclab`** — Isaac Sim execution
+- Conda env **`metagrasp`** — Isaac Sim execution
 - Curated object assets under `UR_grasp_database/<id>/`:
   - `textured.obj` — mesh used for sampling
   - `textured.obj.hand_e.hdf5` — generated Hand-E grasp database
@@ -61,11 +61,11 @@ Edit gripper width and HDF5 suffix in one place: [`grasp_sampler/gripper_profile
 Tool: [`tools/setup_ur_grasp_database.py`](../tools/setup_ur_grasp_database.py)
 
 ```bash
-cd /home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp
+cd /home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp
 conda activate metagrasp
 
 python tools/setup_ur_grasp_database.py \
-  --source /home/sustech/桌面/DSQNet/models_ifl \
+  --source /home/sustech/桌面/MetaSQGrasp_public/models_ifl \
   --objects 001,004,010,016 \
   --overwrite
 ```
@@ -81,7 +81,7 @@ rebuilt with the current Hand-E settings.
 Tool: [`tools/generate_object_grasps.py`](../tools/generate_object_grasps.py)
 
 ```bash
-cd /home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp
+cd /home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp
 conda activate metagrasp
 
 python tools/generate_object_grasps.py \
@@ -161,17 +161,17 @@ python grasp_sampler/visualize_grasp_object.py \
 
 ## 4. Execute in Isaac Sim
 
-Convert URDF to USD (once per object, requires `env_isaaclab`):
+Convert URDF to USD (once per object, requires `metagrasp`):
 
 ```bash
-conda activate env_isaaclab
+conda activate metagrasp
 python urdf_converter.py --input UR_grasp_database/011/textured.urdf --headless
 ```
 
 Run the classical smoke task:
 
 ```bash
-conda activate env_isaaclab
+conda activate metagrasp
 python run.py --task object-v0-Classical \
   --obj_ids 011 \
   --num_envs 1 --headless --enable_cameras \
@@ -185,7 +185,7 @@ python run.py --task object-v0-Classical \
 The default pool is `CLASSICAL_OBJ_IDS` in [`isaac_env/object_env_classical/element_cfg.py`](../isaac_env/object_env_classical/element_cfg.py). Override it at runtime with `--obj_ids`:
 
 ```bash
-conda activate env_isaaclab
+conda activate metagrasp
 python run.py --task object-v0-Classical \
   --obj_ids 001,010,016 \
   --num_envs 1 --headless --enable_cameras \
@@ -214,7 +214,7 @@ python tools/generate_object_grasps.py \
 3. Convert the URDF to the simulation USD expected by the task:
 
 ```bash
-conda activate env_isaaclab
+conda activate metagrasp
 python urdf_converter.py --input UR_grasp_database/<OBJ_ID>/textured.urdf --headless
 ```
 
@@ -306,5 +306,5 @@ Grasps are **not** stored as robot poses. The final `hande_end` pose is computed
 |------|--------------|
 | `object-v0-Classical` | `textured.obj.hand_e.hdf5` + Hand-E scene filter (this guide) |
 | `object-v1-Classical-2f85` | `textured.obj.2f85.hdf5` + Robotiq 2F85 (requires USD asset) |
-| `AIR-v0-Grasp` | Remote vMF-Contact agent or vision demo |
-| `AIR-v0-Data` | Vision demo / optional HDF5 |
+| `SQ-v0-Data` | SQ dataset export with dual-camera snapshots |
+| `supersq_grasp-v0` | SQ-estimated grasp execution |

@@ -51,9 +51,9 @@ def extsq_trimesh_cm(
 ) -> trimesh.Trimesh:
     """Build a local-frame extended superquadric mesh in centimeters."""
     _ensure_training_path()
-    from geometry.primitives import mesh_deformable_superquadric
+    from geometry.primitives import mesh_extended_superquadric
 
-    mesh_o3d = mesh_deformable_superquadric(parameters, np.eye(4, dtype=float), resolution=resolution)
+    mesh_o3d = mesh_extended_superquadric(parameters, np.eye(4, dtype=float), resolution=resolution)
     vertices = np.asarray(mesh_o3d.vertices, dtype=np.float64) * 100.0
     faces = np.asarray(mesh_o3d.triangles, dtype=np.int64)
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces, process=True)

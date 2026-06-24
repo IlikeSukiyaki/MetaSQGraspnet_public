@@ -65,31 +65,58 @@ flowchart LR
 
 ## Prerequisites
 
+Full version matrix: [environment_versions.md](./environment_versions.md).
+
 ### Conda environments
 
 | Env | Used for |
 |-----|----------|
-| `env_isaaclab` | Isaac Sim runs, debug/grasp visualization (needs Open3D) |
-| `metagrasp` | Optional: seed assets, offline HDF5 tools |
+| `metagrasp` | Isaac Sim / Isaac Lab runs, debug/grasp visualization, asset seeding |
+| `rgbsq_grasp` | Offline SQ / ExtSQ training only |
 
-### Python packages (inside `env_isaaclab`)
+### Verified simulation stack (`metagrasp`)
+
+| Component | Version |
+|-----------|---------|
+| Isaac Sim | **5.1.0.0** (pip); binary `5.1.0-rc.19` under `~/IsaacLab/_isaac_sim` |
+| Isaac Lab core | **0.47.2** (editable from `~/IsaacLab/source/isaaclab`) |
+| PyTorch | **2.7.0+cu128** |
+| NumPy | **1.26.0** (`numpy<2`) |
+| Python | **3.11.x** |
+
+Before `run.py`:
+
+```bash
+conda activate metagrasp
+export ISAACLAB_PATH=~/IsaacLab
+source ~/IsaacLab/_isaac_sim/setup_conda_env.sh
+python -c "from isaaclab.app import AppLauncher; print('ok')"
+```
+
+### Python packages (inside `metagrasp`)
 
 Required for `supersq_grasp-v0`:
 
-- Isaac Lab / Isaac Sim stack (already in `env_isaaclab`)
+- Isaac Lab / Isaac Sim stack (see table above)
 - SQ estimation runtime from `sq_estimation_model/training`
-- `omegaconf`, `scikit-learn`, `open3d`, `trimesh`
+- `omegaconf>=2.3.0`, `scikit-learn`, `open3d>=0.19.0`, `trimesh>=4.5.1`, `warp-lang>=1.14.0`
+
+Install MetaSQGrasp extras:
+
+```bash
+pip install -r requirements.txt
+```
 
 Default SQ estimator checkpoint:
 
 ```text
-/home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp/sq_estimation_model/pretrained/sq_esti_model/model_best.pkl
+/home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp/sq_estimation_model/pretrained/sq_esti_model/sq_esti_model_best.pkl
 ```
 
 Default SQ estimator config:
 
 ```text
-/home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp/sq_estimation_model/pretrained/sq_esti_model/sq_esti_model_config.yml
+/home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp/sq_estimation_model/pretrained/sq_esti_model/sq_esti_model_config.yml
 ```
 
 ### Object assets
@@ -104,7 +131,7 @@ Each object ID under `UR_grasp_database/<id>/` must have:
 List local IDs:
 
 ```bash
-ls /home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp/UR_grasp_database
+ls /home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp/UR_grasp_database
 ```
 
 SuperSQ does **not** require `textured.obj.hand_e.hdf5` at runtime (unlike `object-v0-Classical`).
@@ -118,12 +145,12 @@ SuperSQ does **not** require `textured.obj.hand_e.hdf5` at runtime (unlike `obje
 From `metagrasp/MetaSQGrasp`:
 
 ```bash
-cd /home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp
+cd /home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp
 conda activate metagrasp
 
 # Copy mesh/URDF from models_ifl into UR_grasp_database
 python tools/setup_ur_grasp_database.py \
-  --source /home/sustech/桌面/DSQNet/models_ifl \
+  --source /home/sustech/桌面/MetaSQGrasp_public/models_ifl \
   --objects 011 \
   --overwrite
 ```
@@ -131,7 +158,7 @@ python tools/setup_ur_grasp_database.py \
 Convert URDF to USD if `orbit_obj.usd` is missing:
 
 ```bash
-conda activate env_isaaclab
+conda activate metagrasp
 python urdf_converter.py --input UR_grasp_database/011/textured.urdf --headless
 ```
 
@@ -142,8 +169,8 @@ python urdf_converter.py --input UR_grasp_database/011/textured.urdf --headless
 Always start from:
 
 ```bash
-cd /home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp
-conda activate env_isaaclab
+cd /home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp
+conda activate metagrasp
 ```
 
 ### 2.1 Recommended smoke test (with debug artifacts)
@@ -154,7 +181,7 @@ python -u run.py --task supersq_grasp-v0 --obj_ids 004 --num_envs 1 \
   --save_sq_debug \
   --sq_model extsq_esti_model \
   --sq_config sq_estimation_model/pretrained/extsq_esti_model/extsq_esti_model_config.yml \
-  --sq_checkpoint sq_estimation_model/pretrained/extsq_esti_model/model_best.pkl
+  --sq_checkpoint sq_estimation_model/pretrained/extsq_esti_model/extsq_esti_model_best.pkl
 ```
 
 At startup, look for:
@@ -293,8 +320,8 @@ Debug is also saved when partial PC extraction succeeds but SQ fit fails (too fe
 All visualization commands assume:
 
 ```bash
-cd /home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp
-conda activate env_isaaclab
+cd /home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp
+conda activate metagrasp
 ```
 
 ### Shorthand path selection
@@ -450,8 +477,8 @@ These show the robot executing the grasp from external viewpoints. They do **not
 ## 5. Example experiment matrix
 
 ```bash
-cd /home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp
-conda activate env_isaaclab
+cd /home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp
+conda activate metagrasp
 
 for OBJ in 000 001 004 011; do
   python -u run.py --task supersq_grasp-v0 --obj_ids "$OBJ" --num_envs 1 \

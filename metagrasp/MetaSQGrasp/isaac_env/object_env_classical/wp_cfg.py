@@ -1,6 +1,6 @@
 import warp as wp
 
-from isaac_env.air_env_base.wp_cfg import *
+from isaac_env.env_base.wp_cfg import *
 
 from .element_cfg import *
 

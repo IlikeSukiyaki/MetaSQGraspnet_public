@@ -1,9 +1,9 @@
 """Shared simulator wrapper for classical antipodal grasp tasks."""
 
-from isaac_env.air_env_base.sim import AIRPickSm
+from isaac_env.env_base.sim import PickSm
 
 
-class ClassicalPickSmBase(AIRPickSm):
+class ClassicalPickSmBase(PickSm):
     """Base simulator wrapper parameterized by task-specific modules."""
 
     element_cfg = None

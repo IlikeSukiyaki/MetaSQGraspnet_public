@@ -1,19 +1,16 @@
-# MetaSQGrasp: IsaacLab for Supervised / Reinforcement learning (Support IsaacLab 2.0 and IsaacSim 4.5)
+# MetaSQGrasp: IsaacLab for Supervised / Reinforcement learning (Isaac Lab 0.47 + Isaac Sim 5.1 verified)
 
 A data generation engine and test bench for grasp learning, powered by [IsaacLab](https://github.com/isaac-sim/IsaacLab) and [MetaGraspNetv2](https://github.com/maximiliangilles/MetaGraspNet) (MGN) including: 
 
-- Data generation `AIR-v0-Data`
-- Policy evaluation `AIR-v0-Grasp`
-- Teleoperation `AIR-v0-Tele`
-- Reinforcement learning `AIR-v0-SB3`, `AIR-v0-SKRL`
+- Classical antipodal grasp `object-v0-Classical`, `object-v1-Classical-2f85`
+- SQ dataset export `SQ-v0-Data`
+- SQ-estimated grasp execution `supersq_grasp-v0`
 
 ### New features:
 
-1. RL support with `stable baseline3` with `AIR-v0-SB3`, `AIR-v0-SKRL`
-2. Support IsaacLab 2.0 and IsaacSim 4.5.0
-3. Both single-shot grasp execution and continuous learning supported
-4. Teleoperation environment `AIR-v0-Tele`
-5. Remote grasp agent to work around the environment conflict (see [vMF-Contact](https://github.com/YitianShi/vMF-Contact)))
+1. Isaac Lab **0.47.2** + Isaac Sim **5.1.0** simulation stack (see [docs/environment_versions.md](docs/environment_versions.md))
+2. Classical antipodal grasp tasks with Hand-E and Robotiq 2F85 grippers
+3. Superquadric dataset generation and SQ-estimated grasp execution
 
 <div align="center">
 <img src="pic/pic.png" width=500"/ >
@@ -51,21 +48,41 @@ Our teleoperation may also supported by vMF-Contact to reach objects:
 
 ## Getting started
 
+**Workflow overview:** [docs/general_workflow.md](docs/general_workflow.md) — end-to-end guide covering asset setup, data collection, `sq_esti_model` training/evaluation, and SQ-based UR grasping, plus the project roadmap.
 
-Make sure you already installed the Isaac-Sim in proper manner.
+**Environment versions:** [docs/environment_versions.md](docs/environment_versions.md) — verified Isaac Lab / Isaac Sim versions, pinned dependencies, and conda setup notes.
 
-Install Isaac Lab following the [installation tutourial](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/pip_installation.html#installing-isaac-sim). Please make sure that is under your home directory: `~/IsaacLab` and following environment variables are added into `.bashrc`:
+Make sure you already installed Isaac Sim and Isaac Lab in the `metagrasp` conda environment.
+
+Install Isaac Lab following the [installation tutorial](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/pip_installation.html#installing-isaac-sim). Use `~/IsaacLab` as the install root, then wire the conda env:
+
+```bash
+cd ~/IsaacLab
+conda activate metagrasp
+./isaaclab.sh -i
+./isaaclab.sh --conda metagrasp
+pip install -r /path/to/MetaSQGrasp_public/metagrasp/MetaSQGrasp/requirements.txt
+```
+
+Before running `run.py`, verify:
+
+```bash
+conda activate metagrasp
+export ISAACLAB_PATH=~/IsaacLab
+source ~/IsaacLab/_isaac_sim/setup_conda_env.sh
+python -c "from isaaclab.app import AppLauncher; print('ok')"
+```
+
+Optional `.bashrc` convenience:
 
 ```
-# Isaac Sim python executable
-export ISAACSIM_PYTHON_EXE="${ISAACSIM_PATH}/python.sh"
-# Add Isaac Lab's sh path for convenience when runing: isaaclab -p *.py
-alias isaaclab=/home/{user_name}/IsaacLab/isaaclab.sh
+export ISAACLAB_PATH=~/IsaacLab
+alias isaaclab=~/IsaacLab/isaaclab.sh
 ```
 
 ## MetaGraspNet objects [available](https://github.com/maximiliangilles/MetaGraspNet/tree/master?tab=readme-ov-file)
 
-Objects are now adapted from [models](https://nx25922.your-storageshare.de/s/9KrFffzwoTmtapR). Keep the full corpus at `/home/sustech/桌面/DSQNet/models_ifl` and seed the curated UR10e + Hand-E test set into `UR_grasp_database/<id>/` with `tools/setup_ur_grasp_database.py`. Run `isaaclab -p urdf_converter.py` to convert URDF files into USD files (!!! Please use isaaclab 1.4 version for urdf conversion since this is now out-of-date for isaaclab 2.0!). We don't use original USD files since all the collision meshes are in convex hull, which are unrealistic.
+Objects are now adapted from [models](https://nx25922.your-storageshare.de/s/9KrFffzwoTmtapR). Keep the full corpus at `/home/sustech/桌面/MetaSQGrasp_public/models_ifl` and seed the curated UR10e + Hand-E test set into `UR_grasp_database/<id>/` with `tools/setup_ur_grasp_database.py`. Run `python urdf_converter.py --input UR_grasp_database/<id>/textured.urdf --headless` to convert URDF files into USD files. On Isaac Sim 5.1 this converter is less tested than the main sim tasks; see [docs/environment_versions.md](docs/environment_versions.md). We don't use original USD files since all the collision meshes are in convex hull, which are unrealistic.
 
 ## Classical antipodal grasp task (`object-v0-Classical`)
 
@@ -84,12 +101,12 @@ UR10e + Robotiq Hand-E pick-and-lift smoke test using offline antipodal grasps f
 Quick start (after seeding assets):
 
 ```bash
-cd /home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp
+cd /home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp
 conda activate metagrasp
 python tools/generate_object_grasps.py \
   --mesh_root UR_grasp_database --categories 011 --gripper_profile hand_e
 
-conda activate env_isaaclab
+conda activate metagrasp
 python urdf_converter.py --input UR_grasp_database/011/textured.urdf --headless
 python run.py --task object-v0-Classical --obj_ids 011 \
   --num_envs 1 --headless --enable_cameras --saved_video --max_successful_grasps 1
@@ -102,7 +119,7 @@ Experimental wider-gripper task: `object-v1-Classical-2f85` (Robotiq 2F85, `text
 Training for the SQ estimation model (`sq_esti_model`) and ExtSQ estimation model (`extsq_esti_model`) lives in **`sq_estimation_model/training/`**, separate from Isaac sim code. Datasets use JSON manifests with renamed class IDs (`primitive_001` → box, `extsq_est_001` → extended_sq, etc.).
 
 ```bash
-cd /home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp/sq_estimation_model/training
+cd /home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp/sq_estimation_model/training
 conda activate rgbsq_grasp
 
 python train.py --config configs/sq_esti_model_config.yml --device 0 --run sq_esti_model_full
@@ -118,8 +135,8 @@ See [sq_estimation_model/training/README.md](sq_estimation_model/training/README
 **Full workflow:** [docs/supersq_grasp_workflow.md](docs/supersq_grasp_workflow.md)
 
 ```bash
-cd /home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp
-conda activate env_isaaclab
+cd /home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp
+conda activate metagrasp
 python run.py --task supersq_grasp-v0 --obj_ids 004 --num_envs 1 \
   --headless --enable_cameras --saved_video --max_successful_grasps 1
 ```
@@ -132,7 +149,7 @@ python -u run.py --task supersq_grasp-v0 --obj_ids 004 --num_envs 1 \
   --save_sq_debug \
   --sq_model extsq_esti_model \
   --sq_config sq_estimation_model/pretrained/extsq_esti_model/extsq_esti_model_config.yml \
-  --sq_checkpoint sq_estimation_model/pretrained/extsq_esti_model/model_best.pkl
+  --sq_checkpoint sq_estimation_model/pretrained/extsq_esti_model/extsq_esti_model_best.pkl
 ```
 
 Use `--save_sq_debug` to write each attempt under `logs/sq_debug/supersq_grasp-v0/<timestamp>/`. Each attempt folder includes `partial_pc.npy`, `partial_pc.ply`, `sq_mesh_robot.ply`, `grasp_axes.ply`, and `sq_fit.json`, all in the robot-base frame except centimeter-valued grasp matrices recorded in JSON. Visualize one attempt with:
@@ -151,27 +168,27 @@ The Isaac runtime loads estimator code from `sq_estimation_model/training` and e
 
 `SQ-v0-Data` collects synthetic SQ estimation scene observations with the AIR setup's UR10e + Hand-E manipulator, object `models_ifl/001`, a fixed on-hand camera, and a second top-down camera above the table. Each stable randomized scene can be saved as raw depth/segmentation/point-cloud data and converted to estimator training `.npy` samples.
 
-Before the first run, convert the object URDF to a physics-ready USD if `/home/sustech/桌面/DSQNet/models_ifl/001/orbit_obj.usd` is missing:
+Before the first run, convert the object URDF to a physics-ready USD if `/home/sustech/桌面/MetaSQGrasp_public/models_ifl/001/orbit_obj.usd` is missing:
 
 ```bash
-cd /home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp
-conda activate env_isaaclab
-python urdf_converter.py --input /home/sustech/桌面/DSQNet/models_ifl/001/textured.urdf
+cd /home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp
+conda activate metagrasp
+python urdf_converter.py --input /home/sustech/桌面/MetaSQGrasp_public/models_ifl/001/textured.urdf
 ```
 
 Launch the scene without saving:
 
 ```bash
-cd /home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp
-conda activate env_isaaclab
+cd /home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp
+conda activate metagrasp
 python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras
 ```
 
 Collect a bounded dataset:
 
 ```bash
-cd /home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp
-conda activate env_isaaclab
+cd /home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp
+conda activate metagrasp
 python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras \
   --save_camera_data --output_dir datasets/supersq_grasp_data \
   --max_episodes 100 --topdown_height 1.2
@@ -220,13 +237,13 @@ python tools/convert_sq_to_npy.py \
 Each converted `.npy` contains `partial_pc`, `membership`, a coarse box primitive for compatibility, `pcd_frame`, `source_camera`, and `source_sample`. For a quick network-side check, use:
 
 ```bash
-cd /home/sustech/桌面/DSQNet/metagrasp/MetaSQGrasp/sq_estimation_model/training
+cd /home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp/sq_estimation_model/training
 python - <<'PY'
 from sq_est_inference import load_sq_model, recognize_sq
 from extsq_est_inference import load_sample
 
 points, _, _ = load_sample("datasets/isaac_synth/001/001_0000_viewpoint_00.npy")
-model, _ = load_sq_model("configs/sq_esti_model_config.yml", "pretrained/sq_esti_model/model_best.pkl", device="cpu")
+model, _ = load_sq_model("configs/sq_esti_model_config.yml", "pretrained/sq_esti_model/sq_esti_model_best.pkl", device="cpu")
 print(recognize_sq(points, model, num_fitting_points=300)["parameters"])
 PY
 ```

@@ -95,11 +95,7 @@ parser.add_argument(
 )
 parser.add_argument("--save_sq_debug", action="store_true", default=False, help="Save supersq fit debug artifacts.")
 parser.add_argument("--sq_debug_dir", type=str, default=None, help="Directory for supersq debug artifacts.")
-parser.add_argument("--task", type=str, default="AIR-v0-Grasp", choices=["AIR-v0-Grasp", 
-                                                                         "AIR-v0-SB3", 
-                                                                         "AIR-v0-Data", 
-                                                                         "AIR-v0-Tele",
-                                                                         "AIR-v0-SKRL",
+parser.add_argument("--task", type=str, default="object-v0-Classical", choices=[
                                                                          "object-v0-Classical",
                                                                          "object-v1-Classical-2f85",
                                                                          "SQ-v0-Data",
@@ -110,7 +106,6 @@ parser.add_argument("--distributed", action="store_true", help="Run training wit
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
 args_cli = parser.parse_args()
-args_cli.num_envs = 1 if args_cli.task == "AIR-v0-Tele" else args_cli.num_envs
 if args_cli.saved_video and args_cli.headless and not args_cli.enable_cameras:
     print("[WARN] --saved_video in headless mode needs --enable_cameras for off-screen rendering.")
 
@@ -133,30 +128,25 @@ settings.set("/rtx/realtime/mgpu/autoTiling/enabled", True)
 import time
 
 if args_cli.task.startswith("SQ-"):
-    from isaac_env.supersq_grasp_data import SQPickSmData as AIRSim
+    from isaac_env.supersq_grasp_data import SQPickSmData as TaskSim
 elif args_cli.task.startswith("supersq"):
-    from isaac_env.supersq_grasp_env import SuperSQPickSm as AIRSim
+    from isaac_env.supersq_grasp_env import SuperSQPickSm as TaskSim
 elif args_cli.task == "object-v1-Classical-2f85":
-    from isaac_env.object_env_classical_2f85 import ObjectPickSmClassical2F85 as AIRSim
+    from isaac_env.object_env_classical_2f85 import ObjectPickSmClassical2F85 as TaskSim
 elif args_cli.task.startswith("object-"):
-    from isaac_env.object_env_classical import ObjectPickSmClassical as AIRSim
+    from isaac_env.object_env_classical import ObjectPickSmClassical as TaskSim
 else:
-    TASK = args_cli.task.split("-")[-1]
-    exec(f"from isaac_env.air_env_{TASK.lower()} import AIRPickSm{TASK} as AIRSim")
+    raise ValueError(f"Unsupported task: {args_cli.task}")
 
 if __name__ == "__main__":
     # run the main function
-    simulator = AIRSim(args_cli)
+    simulator = TaskSim(args_cli)
     simulator.init_run()
-    if hasattr(simulator, "run_rl") and simulator.env.env.get_wrapper_attr('RL_TRAIN_FLAG'):
-        simulator.run_rl()
-    else:
-        while simulation_app.is_running():
-            # record run time
-            with torch.inference_mode():
-                simulator.run()
-            if hasattr(simulator, "should_stop") and simulator.should_stop():
-                break
+    while simulation_app.is_running():
+        with torch.inference_mode():
+            simulator.run()
+        if hasattr(simulator, "should_stop") and simulator.should_stop():
+            break
     # close the environment
     if hasattr(simulator, "close"):
         simulator.close()

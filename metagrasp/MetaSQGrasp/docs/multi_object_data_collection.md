@@ -42,7 +42,7 @@ Example: if object `011` is the target, the sample lands in `011/epi_000000/` ev
 From `metagrasp/MetaSQGrasp/`:
 
 ```bash
-conda activate env_isaaclab
+conda activate metagrasp
 ```
 
 Assets for every ID in your pool must exist under `UR_grasp_database/<id>/`:
@@ -67,7 +67,7 @@ Collect one episode with all demo objects visible. Full export keeps `depth.npy`
 
 ```bash
 cd metagrasp/MetaSQGrasp
-conda activate env_isaaclab
+conda activate metagrasp
 
 python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras --headless \
   --save_camera_data \
@@ -111,7 +111,7 @@ camera_topdown / 011: 217 points
 Good for occlusion smoke tests when you only need the **target** partial PC and preview images.
 
 ```bash
-conda activate env_isaaclab
+conda activate metagrasp
 
 python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras --headless \
   --save_camera_data \
