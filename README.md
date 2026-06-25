@@ -8,24 +8,37 @@ The project builds on object assets and grasp-label conventions from [MetaGraspN
 
 ## Teasers
 
-All teaser media lives in [`metagrasp/MetaSQGrasp/assets/`](metagrasp/MetaSQGrasp/assets/):
+All teaser media lives in [`metagrasp/MetaSQGrasp/assets/`](metagrasp/MetaSQGrasp/assets/). Each grasp demo pairs **Isaac Sim pick-and-lift** (GIF) with **SQ fit and grasp-pose visualization** (PNG) from the same `supersq_grasp-v0` run.
 
-| File | What it shows |
-|------|----------------|
-| [`demo_1.gif`](metagrasp/MetaSQGrasp/assets/demo_1.gif) | Superquadric grasp — `supersq_grasp-v0`, object **016** |
-| [`demo_2.gif`](metagrasp/MetaSQGrasp/assets/demo_2.gif) | Superquadric grasp — `supersq_grasp-v0`, object **010** |
-| [`demo_3.gif`](metagrasp/MetaSQGrasp/assets/demo_3.gif) | Classical oracle grasp — `object-v0-Classical`, object **001** |
-| [`data_generation_demo.png`](metagrasp/MetaSQGrasp/assets/data_generation_demo.png) | Multi-object synthetic data — `SQ-v0-Data` → `datasets/supersq_grasp_data/multi_obj_full` |
+| Demo | Task | Object | Simulation (GIF) | SQ fit & grasp poses (PNG) |
+|------|------|--------|------------------|----------------------------|
+| 1 | `supersq_grasp-v0` | **016** | [`demo_1.gif`](metagrasp/MetaSQGrasp/assets/demo_1.gif) | [`demo_1.png`](metagrasp/MetaSQGrasp/assets/demo_1.png) |
+| 2 | `supersq_grasp-v0` | **010** | [`demo_2.gif`](metagrasp/MetaSQGrasp/assets/demo_2.gif) | [`demo_2.png`](metagrasp/MetaSQGrasp/assets/demo_2.png) |
+| 3 | `supersq_grasp-v0` | **001** | [`demo_3.gif`](metagrasp/MetaSQGrasp/assets/demo_3.gif) | [`demo_3.png`](metagrasp/MetaSQGrasp/assets/demo_3.png) |
 
-Static PNG fallbacks (same scenes): [`demo_1.png`](metagrasp/MetaSQGrasp/assets/demo_1.png), [`demo_2.png`](metagrasp/MetaSQGrasp/assets/demo_2.png), [`demo_3.png`](metagrasp/MetaSQGrasp/assets/demo_3.png).
+**Demo 1** — `supersq_grasp-v0`, object **016**
 
-| Superquadric grasp (`supersq_grasp-v0`, obj 016) | Superquadric grasp (`supersq_grasp-v0`, obj 010) |
+| Isaac Sim execution | SQ estimation & grasp poses |
 |:---:|:---:|
-| ![Superquadric grasp demo 1](metagrasp/MetaSQGrasp/assets/demo_1.gif) | ![Superquadric grasp demo 2](metagrasp/MetaSQGrasp/assets/demo_2.gif) |
+| <img src="metagrasp/MetaSQGrasp/assets/demo_1.gif" alt="Demo 1 simulation" width="480"> | <img src="metagrasp/MetaSQGrasp/assets/demo_1.png" alt="Demo 1 SQ fit and grasp poses" width="480"> |
 
-| Classical oracle grasp (`object-v0-Classical`, obj 001) | Multi-object synthetic data (`SQ-v0-Data`) |
+**Demo 2** — `supersq_grasp-v0`, object **010**
+
+| Isaac Sim execution | SQ estimation & grasp poses |
 |:---:|:---:|
-| ![Classical grasp demo](metagrasp/MetaSQGrasp/assets/demo_3.gif) | ![Data generation demo](metagrasp/MetaSQGrasp/assets/data_generation_demo.png) |
+| <img src="metagrasp/MetaSQGrasp/assets/demo_2.gif" alt="Demo 2 simulation" width="480"> | <img src="metagrasp/MetaSQGrasp/assets/demo_2.png" alt="Demo 2 SQ fit and grasp poses" width="480"> |
+
+**Demo 3** — `supersq_grasp-v0`, object **001**
+
+| Isaac Sim execution | SQ estimation & grasp poses |
+|:---:|:---:|
+| <img src="metagrasp/MetaSQGrasp/assets/demo_3.gif" alt="Demo 3 simulation" width="480"> | <img src="metagrasp/MetaSQGrasp/assets/demo_3.png" alt="Demo 3 SQ fit and grasp poses" width="480"> |
+
+**Data collection** — `SQ-v0-Data` → [`datasets/supersq_grasp_data/multi_obj_full`](metagrasp/MetaSQGrasp/datasets/supersq_grasp_data/multi_obj_full)
+
+<p align="center">
+  <img src="metagrasp/MetaSQGrasp/assets/data_generation_demo.png" alt="Multi-object synthetic data collection (SQ-v0-Data)" width="480">
+</p>
 
 ---
 
