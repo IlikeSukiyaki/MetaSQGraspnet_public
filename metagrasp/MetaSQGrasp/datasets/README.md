@@ -38,7 +38,7 @@ bash tools/collect_demo_dataset.sh datasets/supersq_grasp_data/demo
 
 Collect cluttered-table episodes with `--scene_objects` (2–4 objects from the pool) and visualize all object partial PCs with `tools/visualize_partial_pc.py`.
 
-Full guide: [`docs/multi_object_data_collection.md`](../docs/multi_object_data_collection.md)
+Full guide: [`../isaac_env/supersq_grasp_data/multi-object-collection.md`](../isaac_env/supersq_grasp_data/multi-object-collection.md)
 
 ```bash
 # 4 objects on table, full export (per-object visualization)

@@ -106,8 +106,8 @@ class PickSm:
     def should_stop(self) -> bool:
         env = self.env_unwrapped
         if self.max_successful_grasps is not None:
-            saved = int(getattr(env, "num_saved_videos", 0))
-            if saved >= self.max_successful_grasps:
+            successes = int(getattr(env, "num_successful_grasps", 0))
+            if successes >= self.max_successful_grasps:
                 print(
                     f"[INFO] Reached max successful grasps ({self.max_successful_grasps}). Stopping."
                 )

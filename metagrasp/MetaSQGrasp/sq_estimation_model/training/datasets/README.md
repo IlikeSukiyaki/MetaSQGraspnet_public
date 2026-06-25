@@ -21,7 +21,7 @@ datasets/
 
 | Subfolder | Command |
 |-----------|---------|
-| `primitive_dataset/`, `object_dataset/`, `evaluation_dataset/` | `python scripts/migrate_datasets.py` (copies from `rgbsq_grasp/datasets/`) |
+| `primitive_dataset/`, `object_dataset/`, `evaluation_dataset/` | Included in repo manifests; regenerate `.npy` samples locally or use `python scripts/migrate_datasets.py --source /path/to/source --target datasets` |
 | `extsq_est_dataset/` | `python scripts/generate_extsq_est_dataset.py` |
 
 See [training/README.md](../README.md).

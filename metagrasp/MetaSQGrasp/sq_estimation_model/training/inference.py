@@ -12,13 +12,21 @@ from registry.models import get_model, safe_torch_load
 ArrayLike = Union[np.ndarray, torch.Tensor]
 
 
+def resolve_device(device: Union[str, int, torch.device]) -> str:
+    device_str = str(device)
+    if device_str == "cpu" or not torch.cuda.is_available():
+        return "cpu"
+    if device_str.startswith("cuda"):
+        return device_str
+    return f"cuda:{device_str}"
+
+
 def load_recognition_model(
     config_path: Union[str, Path],
     checkpoint_path: Union[str, Path],
-    device: Union[str, torch.device] = "cuda:0",
+    device: Union[str, int, torch.device] = "cuda:0",
 ) -> Tuple[torch.nn.Module, object]:
-    if str(device).startswith("cuda") and not torch.cuda.is_available():
-        device = "cpu"
+    device = resolve_device(device)
 
     cfg = OmegaConf.load(config_path)
     model = get_model(cfg)

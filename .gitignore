@@ -12,14 +12,42 @@ metagrasp/MetaSQGrasp/datasets/*
 !metagrasp/MetaSQGrasp/datasets/supersq_grasp_data/
 metagrasp/MetaSQGrasp/datasets/supersq_grasp_data/*
 !metagrasp/MetaSQGrasp/datasets/supersq_grasp_data/.gitkeep
+!metagrasp/MetaSQGrasp/datasets/supersq_grasp_data/README.md
+!metagrasp/MetaSQGrasp/datasets/supersq_grasp_data/multi_obj_full/
+!metagrasp/MetaSQGrasp/datasets/supersq_grasp_data/multi_obj_full/**
 metagrasp/MetaSQGrasp/models/models_ifl
 metagrasp/MetaSQGrasp/models/dataset_real/
 metagrasp/MetaSQGrasp/data/
 metagrasp/MetaSQGrasp/data_all/
 metagrasp/MetaSQGrasp/experiments/
-metagrasp/MetaSQGrasp/logs*/
 metagrasp/MetaSQGrasp/wandb*/
 metagrasp/MetaSQGrasp/.algorithms/
+
+# --- MetaSQGrasp simulation logs (mostly local; curated demos whitelisted) ---
+metagrasp/MetaSQGrasp/logs/**
+!metagrasp/MetaSQGrasp/logs/README.md
+
+# Empty placeholders (simulation outputs land here)
+!metagrasp/MetaSQGrasp/logs/sq_debug/
+!metagrasp/MetaSQGrasp/logs/sq_debug/.gitkeep
+!metagrasp/MetaSQGrasp/logs/videos/
+!metagrasp/MetaSQGrasp/logs/videos/.gitkeep
+!metagrasp/MetaSQGrasp/logs/urdf_conversion/
+!metagrasp/MetaSQGrasp/logs/urdf_conversion/.gitkeep
+
+# Curated demo artifacts (in-repo examples; un-ignore parent dirs first)
+!metagrasp/MetaSQGrasp/logs/sq_debug/supersq_grasp-v0/
+!metagrasp/MetaSQGrasp/logs/sq_debug/supersq_grasp-v0/2026-06-25_16-40-32/
+!metagrasp/MetaSQGrasp/logs/sq_debug/supersq_grasp-v0/2026-06-25_16-40-32/env0_epi000000_attempt0_obj011/
+!metagrasp/MetaSQGrasp/logs/sq_debug/supersq_grasp-v0/2026-06-25_16-40-32/env0_epi000000_attempt0_obj011/**
+!metagrasp/MetaSQGrasp/logs/urdf_conversion/2026-06-09_21-20-10/
+!metagrasp/MetaSQGrasp/logs/urdf_conversion/2026-06-09_21-20-10/**
+!metagrasp/MetaSQGrasp/logs/videos/object-v0-Classical/
+!metagrasp/MetaSQGrasp/logs/videos/object-v0-Classical/2026-06-09_16-51-45/
+!metagrasp/MetaSQGrasp/logs/videos/object-v0-Classical/2026-06-09_16-51-45/grasp_success_env0_epi1_obj000_step0_montage.mp4
+!metagrasp/MetaSQGrasp/logs/videos/supersq_grasp-v0/
+!metagrasp/MetaSQGrasp/logs/videos/supersq_grasp-v0/2026-06-10_17-19-43/
+!metagrasp/MetaSQGrasp/logs/videos/supersq_grasp-v0/2026-06-10_17-19-43/grasp_success_env0_epi0_obj001_step0_montage.mp4
 
 # --- MetaSQGrasp SQ estimation training data (large; regenerate via migrate_datasets.py) ---
 metagrasp/MetaSQGrasp/sq_estimation_model/training/datasets/**
@@ -31,37 +59,26 @@ metagrasp/MetaSQGrasp/sq_estimation_model/training/datasets/**
 !metagrasp/MetaSQGrasp/sq_estimation_model/training/datasets/**/instance_manifest.csv
 metagrasp/MetaSQGrasp/sq_estimation_model/training/train_results/*
 !metagrasp/MetaSQGrasp/sq_estimation_model/training/train_results/README.md
+metagrasp/MetaSQGrasp/sq_estimation_model/training/train_results_tensorboard/
 metagrasp/MetaSQGrasp/sq_estimation_model/training/eval_results/*
 !metagrasp/MetaSQGrasp/sq_estimation_model/training/eval_results/README.md
 
-# --- MetaSQGrasp SQ estimation checkpoints (configs only in git) ---
+# --- MetaSQGrasp SQ estimation checkpoints (configs + released weights in git) ---
 metagrasp/MetaSQGrasp/sq_estimation_model/pretrained/**
 !metagrasp/MetaSQGrasp/sq_estimation_model/pretrained/**/
 !metagrasp/MetaSQGrasp/sq_estimation_model/pretrained/README.md
 !metagrasp/MetaSQGrasp/sq_estimation_model/pretrained/**/*.yml
 
-# --- rgbsq_grasp datasets and training artifacts ---
-rgbsq_grasp/datasets/*
-!rgbsq_grasp/datasets/README.md
-!rgbsq_grasp/datasets/**/.gitkeep
-rgbsq_grasp/train_results/*
-!rgbsq_grasp/train_results/README.md
-rgbsq_grasp/train_results_tensorboard/*
-!rgbsq_grasp/train_results_tensorboard/README.md
-rgbsq_grasp/pretrained/*
-!rgbsq_grasp/pretrained/README.md
-!rgbsq_grasp/pretrained/**/
-!rgbsq_grasp/pretrained/**/*.yml
-rgbsq_grasp/evaluation_results/
-rgbsq_grasp/temp/
+# --- Legacy training stack (not part of public MetaSQGrasp) ---
+rgbsq_grasp/
 
 # --- Checkpoints and caches ---
 *.pth
 *.pt
 *.ckpt
 *.pkl
+!metagrasp/MetaSQGrasp/sq_estimation_model/pretrained/**/*.pkl
 *.zip
-!rgbsq_grasp/pretrained/**/*.yml
 __pycache__/
 *.py[cod]
 *.pyo

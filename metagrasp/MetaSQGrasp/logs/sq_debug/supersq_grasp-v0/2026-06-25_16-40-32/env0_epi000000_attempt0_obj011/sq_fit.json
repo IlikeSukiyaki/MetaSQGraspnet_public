@@ -1,0 +1,163 @@
+{
+  "object_id": "011",
+  "frame": {
+    "partial_pc": "robot_base_m",
+    "sq_mesh": "robot_base_m",
+    "grasp_pose": "robot_base_cm"
+  },
+  "camera_index": 1,
+  "mask_method": "instance_label",
+  "mask_mode": "auto",
+  "mask_debug": {
+    "instance_method": "instance_label"
+  },
+  "num_points": 202,
+  "partial_pc_npy": "logs/sq_debug/supersq_grasp-v0/2026-06-25_16-40-32/env0_epi000000_attempt0_obj011/partial_pc.npy",
+  "exports": {
+    "partial_pc_ply": "logs/sq_debug/supersq_grasp-v0/2026-06-25_16-40-32/env0_epi000000_attempt0_obj011/partial_pc.ply",
+    "sq_mesh_robot_ply": "logs/sq_debug/supersq_grasp-v0/2026-06-25_16-40-32/env0_epi000000_attempt0_obj011/sq_mesh_robot.ply",
+    "grasp_axes_ply": "logs/sq_debug/supersq_grasp-v0/2026-06-25_16-40-32/env0_epi000000_attempt0_obj011/grasp_axes.ply",
+    "depth_png": "logs/sq_debug/supersq_grasp-v0/2026-06-25_16-40-32/env0_epi000000_attempt0_obj011/observation/depth.png",
+    "instance_png": "logs/sq_debug/supersq_grasp-v0/2026-06-25_16-40-32/env0_epi000000_attempt0_obj011/observation/instance.png",
+    "rgb_png": "logs/sq_debug/supersq_grasp-v0/2026-06-25_16-40-32/env0_epi000000_attempt0_obj011/observation/rgb.png",
+    "object_mask_png": "logs/sq_debug/supersq_grasp-v0/2026-06-25_16-40-32/env0_epi000000_attempt0_obj011/observation/object_mask.png",
+    "obs_meta_json": "logs/sq_debug/supersq_grasp-v0/2026-06-25_16-40-32/env0_epi000000_attempt0_obj011/observation/obs_meta.json"
+  },
+  "observation_dir": "logs/sq_debug/supersq_grasp-v0/2026-06-25_16-40-32/env0_epi000000_attempt0_obj011/observation",
+  "se3_m": [
+    [
+      -0.8029882162197821,
+      0.11687761373436578,
+      0.5844224054739287,
+      0.7483732095786316
+    ],
+    [
+      0.06004887949650772,
+      -0.9597273254637377,
+      0.2744405087253611,
+      0.1993336126361199
+    ],
+    [
+      0.592962103918443,
+      0.25546640516119035,
+      0.7636313633885348,
+      -0.0074944402121013
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "parameters": {
+    "a1": 0.02313247830557102,
+    "a2": 0.02320778303847797,
+    "a3": 0.027031168951952834,
+    "e1": 0.874121367931366,
+    "e2": 0.9836475849151611
+  },
+  "debug": {
+    "normalizer": 0.0711195794873011,
+    "segment_frame": [
+      [
+        -0.7239948782076852,
+        -0.1981045508482528,
+        -0.6607465499435099,
+        0.7514304423184327
+      ],
+      [
+        0.620331251306828,
+        0.23195741474892528,
+        -0.7492562287996679,
+        0.19620560228611233
+      ],
+      [
+        0.30169613020578206,
+        -0.952339406239292,
+        -0.045045536323243915,
+        0.006456008777312559
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "pred_fit": [
+      -0.0007729665376245975,
+      0.20552398264408112,
+      0.0042854612693190575,
+      0.4129963517189026,
+      0.8533382415771484,
+      -0.2913825213909149,
+      0.12784476578235626,
+      0.3252617418766022,
+      0.3263205885887146,
+      0.38008055090904236,
+      0.874121367931366,
+      0.9836475849151611
+    ],
+    "num_input_points": 202,
+    "num_processed_points": 300
+  },
+  "selection": {
+    "score": 0.9999999999989999,
+    "candidate_count": 6,
+    "width_cm": 3.4533731937408447,
+    "approach_alignment": 0.8891523473331249,
+    "gripper_pose_cm": [
+      [
+        0.5750296946998272,
+        -0.7390261637076885,
+        -0.35097177094769505,
+        75.55415547951209
+      ],
+      [
+        -0.8170101594847953,
+        -0.496253438071753,
+        -0.2936442051637519,
+        20.43590013320038
+      ],
+      [
+        0.04283981220842174,
+        0.4556016402027785,
+        -0.8891523473340143,
+        0.9664040495346397
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "contact_pose_cm": [
+      [
+        0.5750296964013297,
+        -0.7390261586519061,
+        -0.35097176750847947,
+        74.56125941287141
+      ],
+      [
+        -0.8170101619023137,
+        -0.4962534346768131,
+        -0.2936442022862962,
+        21.84662062508974
+      ],
+      [
+        0.0428398123351839,
+        0.45560163708594326,
+        -0.889152338621101,
+        0.8924331199819119
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ]
+  }
+}

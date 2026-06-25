@@ -1,0 +1,75 @@
+model:
+  arch: sq_esti_model
+  backbone:
+    arch: pointnet
+    input_dim: 3
+    global_feature_dim: 1024
+    use_input_transform: True
+    use_feature_transform: False
+    use_batch_norm: True
+  position:
+    l_hidden: [512, 256]
+    output_dim: 3
+  orientation:
+    l_hidden: [512, 256]
+    output_dim: 4
+  size:
+    l_hidden: [512, 256]
+    output_dim: 3
+  shape:
+    l_hidden: [512, 256]
+    output_dim: 2
+trainer: recognition
+training:
+  n_epoch: 1000
+  loss:
+    type: sq_esti_loss
+    weight: 0.01
+  optimizer:
+    name: 'adam'
+    lr: 0.001
+  print_interval: 100
+  val_interval: 5000
+  save_interval: 10000
+  visualize_number: 3
+  visualize_interval: 10000
+data:
+  training:
+    loader: primitive
+    path: datasets/primitive_dataset
+    manifest: dataset_manifest.json
+    split: train
+    class_ids: ['primitive_001', 'primitive_002', 'primitive_003', 'primitive_004', 'primitive_005', 'primitive_006']
+    num_points: 1500
+    num_gt_points: 1500
+    num_sampled_points: 300
+    noise_augment: True
+    noise_std: 0.001
+    batch_size: 16
+    num_workers: 8
+  validation:
+    loader: primitive
+    path: datasets/primitive_dataset
+    manifest: dataset_manifest.json
+    split: validation
+    class_ids: ['primitive_001', 'primitive_002', 'primitive_003', 'primitive_004', 'primitive_005', 'primitive_006']
+    num_points: 1500
+    num_gt_points: 1500
+    num_sampled_points: 300
+    noise_augment: True
+    noise_std: 0.001
+    batch_size: 16
+    num_workers: 8
+  test:
+    loader: primitive
+    path: datasets/primitive_dataset
+    manifest: dataset_manifest.json
+    split: test
+    class_ids: ['primitive_001', 'primitive_002', 'primitive_003', 'primitive_004', 'primitive_005', 'primitive_006']
+    num_points: 1500
+    num_gt_points: 1500
+    num_sampled_points: 300
+    noise_augment: True
+    noise_std: 0.001
+    batch_size: 16
+    num_workers: 8

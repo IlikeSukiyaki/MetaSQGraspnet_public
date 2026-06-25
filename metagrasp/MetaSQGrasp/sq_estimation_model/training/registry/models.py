@@ -4,6 +4,7 @@ import torch
 from omegaconf import OmegaConf
 
 from backbone.dgcnn import DGCNN
+from backbone.pointnet import PointNetBackbone
 from extsq_esti_model.network import ExtSqEstiModel
 from sq_esti_model.network import SqEstiModel
 
@@ -33,6 +34,7 @@ def get_backbone_instance(name):
     try:
         return {
             "dgcnn": DGCNN,
+            "pointnet": PointNetBackbone,
         }[name]
     except KeyError as exc:
         raise ValueError(f"backbone {name} not available") from exc
