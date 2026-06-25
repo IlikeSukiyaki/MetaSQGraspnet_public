@@ -74,6 +74,7 @@ class EnvBase(ManagerBasedRLEnv):
             ]
         self._episode_video_committed = [False for _ in range(self.num_envs)]
         self.num_saved_videos = 0
+        self.num_successful_grasps = 0
 
         # Define entity
         self.robot = self.scene[ROBOT_NAME]
@@ -642,6 +643,7 @@ class EnvBase(ManagerBasedRLEnv):
                 self.reward_recorder[
                     i, self.epi_step_count[i, 0], self.epi_step_count[i, 1]
                 ] += self.reward_buf[i]
+                self.num_successful_grasps += 1
                 self._commit_episode_video(i)
                 # Move object to somewhere away from the bin
                 drop_pose_curr = self.obj_drop_pose.clone()

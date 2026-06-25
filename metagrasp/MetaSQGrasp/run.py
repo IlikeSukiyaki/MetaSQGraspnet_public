@@ -36,7 +36,7 @@ parser.add_argument(
     "--max_successful_grasps",
     type=int,
     default=None,
-    help="Stop after saving this many successful grasp videos (--saved_video).",
+    help="Stop after this many successful grasps (works with or without --saved_video).",
 )
 parser.add_argument(
     "--topdown_height",

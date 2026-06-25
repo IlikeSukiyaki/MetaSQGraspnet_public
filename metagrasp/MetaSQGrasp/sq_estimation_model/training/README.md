@@ -1,8 +1,10 @@
-# SQ Estimation Model Training (Isolated)
+# SQ Estimation Model Training
 
-This folder is the **isolated training package** for the SQ estimation model (`sq_esti_model`) and ExtSQ estimation model (`extsq_esti_model`). It is intentionally separate from the Isaac Lab simulation code under `isaac_env/` and `run.py`.
+Isolated training package for the SQ estimation model (`sq_esti_model`) and ExtSQ estimation model (`extsq_esti_model`). Separate from Isaac Lab simulation code under `isaac_env/` and `run.py`.
 
-The original source under `rgbsq_grasp/` is left untouched.
+Package overview: [`../README.md`](../README.md)
+
+---
 
 ## Layout
 
@@ -12,28 +14,32 @@ sq_estimation_model/
     train.py                # W&B logging
     train_tensorboard.py    # TensorBoard logging
     configs/
-    datasets/               # copied + renamed datasets (JSON manifests)
+    datasets/               # training datasets (JSON manifests)
     train_results/
     scripts/generate_extsq_est_dataset.py
-    scripts/migrate_datasets.py
   pretrained/
     sq_esti_model/
     extsq_esti_model/
 ```
 
+---
+
 ## Environment
 
-Use the separate **`rgbsq_grasp`** conda env for training (not `metagrasp`). Simulation versions are documented in [docs/environment_versions.md](../../docs/environment_versions.md).
+Use the separate **`rgbsq_grasp`** conda env for training (not `metagrasp`). This env name is kept for historical compatibility — it is **not** a folder in this repository.
 
-Use the same conda env as legacy `rgbsq_grasp` (Python 3.10+ + PyTorch 2.7+ recommended), then install deps:
+Simulation versions: [install.md](../../install.md)
 
 ```bash
+conda create -n rgbsq_grasp python=3.10 -y
 conda activate rgbsq_grasp
+pip install torch  # install a CUDA-matched wheel (2.7+ recommended)
+
 cd metagrasp/MetaSQGrasp/sq_estimation_model/training
 python -m pip install -r requirements.txt
 ```
 
-Install PyTorch separately if needed (CUDA 12.8+ wheels for RTX 5090).
+---
 
 ## Train SQ estimation model
 
@@ -64,11 +70,9 @@ Offline logging (no W&B upload):
 WANDB_MODE=offline python train.py --config configs/sq_esti_model_config.yml --device 0 --run my_run
 ```
 
-## TensorBoard training
+---
 
-Use `train_tensorboard.py` for local TensorBoard logging with decomposed loss terms
-(geometric fit, orientation prior, weighted orientation prior), gradient norm, LR,
-and prediction diagnostics. This mirrors the `rgbsq_grasp` TensorBoard setup.
+## TensorBoard training
 
 ```bash
 python train_tensorboard.py \
@@ -95,27 +99,21 @@ python train_tensorboard.py --config configs/sq_esti_model_config_smoke.yml --de
 python train_tensorboard.py --config configs/extsq_esti_model_config_smoke.yml --device cpu --run smoke_extsq_tb
 ```
 
-Checkpoints and copied configs are saved under:
-
-```text
-train_results_tensorboard/sq_esti_model_config/<run>/sq_esti_model_best.pkl
-train_results_tensorboard/extsq_esti_model_config/<run>/extsq_esti_model_best.pkl
-train_results_tensorboard/<config>/<run>/tensorboard/
-```
-
-| Entry point | Logger | Output root |
-|-------------|--------|-------------|
-| `train.py` | Weights & Biases | `train_results/` |
-| `train_tensorboard.py` | TensorBoard | `train_results_tensorboard/` |
-
 Checkpoints are saved under:
 
 ```text
 train_results/sq_esti_model_config/<run>/sq_esti_model_best.pkl
-train_results/extsq_esti_model_config/<run>/extsq_esti_model_best.pkl
+train_results_tensorboard/sq_esti_model_config/<run>/sq_esti_model_best.pkl
 ```
 
-Best-checkpoint filenames include the model architecture (`sq_esti_model_best.pkl`, `extsq_esti_model_best.pkl`).
+Copy the best checkpoint for Isaac runtime:
+
+```bash
+cp train_results/sq_esti_model_config/sq_esti_model_full/sq_esti_model_best.pkl \
+   ../pretrained/sq_esti_model/sq_esti_model_best.pkl
+```
+
+---
 
 ## Smoke tests
 
@@ -124,12 +122,16 @@ WANDB_MODE=disabled python train.py --config configs/sq_esti_model_config_smoke.
 WANDB_MODE=disabled python train.py --config configs/extsq_esti_model_config_smoke.yml --device 0 --run smoke_extsq
 ```
 
+---
+
 ## Dataset layout (JSON manifests)
 
 CSV datalists are **not** used. Each dataset has:
 
 - `dataset_manifest.json` — split definitions
 - `*_class_map.json` — stable ID → semantic type mapping
+
+Datasets live under `sq_estimation_model/training/datasets/`. See [`datasets/README.md`](datasets/README.md) for schema details.
 
 ### Primitive dataset
 
@@ -142,56 +144,13 @@ CSV datalists are **not** used. Each dataset has:
 | `primitive_005` | truncated_cone |
 | `primitive_006` | truncated_torus |
 
-Example file:
+### Object / evaluation datasets
 
-```text
-datasets/primitive_dataset/primitive_001/primitive_001_0000_viewpoint_01.npy
-```
+- `object_dataset/` — `object_001` … `object_012`
+- `evaluation_dataset/` — `evaluation_001` … `evaluation_012`
+- `extsq_est_dataset/` — extended superquadrics (`extsq_est_001`)
 
-Manifest entry:
-
-```json
-{
-  "path": "primitive_001/primitive_001_0000_viewpoint_01.npy",
-  "class_id": "primitive_001",
-  "source_type": "box",
-  "instance": "0000",
-  "viewpoint": "01"
-}
-```
-
-Splits: `train` (6959), `validation` (2982), `test` (1106) after viewpoint filtering.
-
-### Object dataset
-
-Uses `object_001` … `object_012` (alphabetical semantic mapping). See `datasets/object_dataset/object_class_map.json`.
-
-Splits: `train`, `validation`, `test`.
-
-### Evaluation dataset
-
-Uses `evaluation_001` … `evaluation_012` with the same semantic order as object classes. See `datasets/evaluation_dataset/evaluation_class_map.json`.
-
-Single split: `all` (1701 samples).
-
-### ExtSQ estimation dataset
-
-Uses one stable class id:
-
-| Class ID | Semantic type |
-|----------|---------------|
-| `extsq_est_001` | extended_sq |
-
-Generate a MetaSQGrasp-native manifest dataset from an existing generated folder:
-
-```bash
-python scripts/generate_extsq_est_dataset.py \
-  --source-dataset ../../../../rgbsq_grasp/datasets/extended_sq_dataset \
-  --target datasets/extsq_est_dataset \
-  --overwrite
-```
-
-To run the renderer first and then write the manifest layout:
+### Generate ExtSQ dataset
 
 ```bash
 python scripts/generate_extsq_est_dataset.py \
@@ -201,17 +160,16 @@ python scripts/generate_extsq_est_dataset.py \
   --overwrite
 ```
 
-## Re-migrate datasets from rgbsq_grasp
-
-If you need to refresh copied data from the untouched source:
+Or from an existing generated folder:
 
 ```bash
-python scripts/migrate_datasets.py \
-  --source ../../../../rgbsq_grasp/datasets \
-  --target datasets
+python scripts/generate_extsq_est_dataset.py \
+  --source-dataset /path/to/extended_sq_dataset \
+  --target datasets/extsq_est_dataset \
+  --overwrite
 ```
 
-This physically copies `.npy` files, renames class folders/files to stable IDs, and regenerates JSON manifests.
+---
 
 ## ExtSQ offline evaluation
 
@@ -224,6 +182,8 @@ python scripts/evaluate_extsq_est_model.py \
   --max-samples 32 \
   --output eval_results/extsq_est_eval.json
 ```
+
+---
 
 ## Inference helper
 
@@ -238,13 +198,29 @@ model, cfg = load_recognition_model(
 params = predict_parameters(model, point_cloud_xyz, num_points=300)
 ```
 
-## Naming reference
+---
 
-| Old (rgbsq_grasp) | New (MetaSQGrasp) |
-|-------------------|----------------------|
-| old regular SQ estimator name | sq_esti_model |
-| old deformable SQ estimator name | extsq_esti_model |
-| old regular SQ config name | sq_esti_model_config.yml |
-| old deformable SQ config name | extsq_esti_model_config.yml |
-| sq_loss | sq_esti_loss |
-| old deformable SQ loss | extsq_esti_loss |
+## Deploy to simulation
+
+After training, copy checkpoints to `sq_estimation_model/pretrained/` and run:
+
+```bash
+conda activate metagrasp
+python run.py --task supersq_grasp-v0 --obj_ids 004 --num_envs 1 \
+  --headless --enable_cameras --max_successful_grasps 1 --save_sq_debug
+```
+
+Guide: [`isaac_env/supersq_grasp_env/README.md`](../../isaac_env/supersq_grasp_env/README.md)
+
+---
+
+## Model naming reference
+
+| Component | Name |
+|-----------|------|
+| Regular SQ estimator | `sq_esti_model` |
+| ExtSQ estimator | `extsq_esti_model` |
+| Regular SQ config | `sq_esti_model_config.yml` |
+| ExtSQ config | `extsq_esti_model_config.yml` |
+| Regular SQ loss | `sq_esti_loss` |
+| ExtSQ loss | `extsq_esti_loss` |

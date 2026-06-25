@@ -1,8 +1,12 @@
+# SQ estimation training dependencies (install into rgbsq_grasp conda env)
+# PyTorch is installed separately — use CUDA 12.8+ wheels, torch>=2.7 recommended
+#
+# Verified alongside metagrasp sim stack (2026-06): open3d==0.19.0, omegaconf==2.3.0
 wandb
-omegaconf
-scikit-learn
+omegaconf>=2.3.0
+scikit-learn>=1.5.0
 scipy
-open3d
+open3d>=0.19.0
 pandas
 tqdm
 six

@@ -2,9 +2,13 @@
 
 UR10e + Robotiq Hand-E pick-and-lift smoke test using offline antipodal grasps from `UR_grasp_database/<id>/textured.obj.hand_e.hdf5`.
 
+---
+
 ## Prerequisites
 
-Run these from the MetaSQGrasp repo root (`metagrasp/MetaSQGrasp/`).
+Run these from the MetaSQGrasp root (`metagrasp/MetaSQGrasp/`).
+
+Full asset pipeline: [`UR_grasp_database/README.md`](../../UR_grasp_database/README.md)
 
 ### 1. Seed object assets
 
@@ -13,7 +17,7 @@ Each object ID needs a folder under `UR_grasp_database/<id>/` with mesh and URDF
 ```bash
 conda activate metagrasp
 python tools/setup_ur_grasp_database.py \
-  --source /home/sustech/桌面/MetaSQGrasp_public/models_ifl \
+  --source ../../models_ifl \
   --objects 000,001,004,011 \
   --overwrite
 ```
@@ -52,10 +56,11 @@ Expected per object:
 
 - `UR_grasp_database/<id>/orbit_obj.usd`
 
+---
+
 ## Verify the task
 
 ```bash
-cd /home/sustech/桌面/MetaSQGrasp_public/metagrasp/MetaSQGrasp
 conda activate metagrasp
 
 python run.py --task object-v0-Classical \
@@ -69,8 +74,14 @@ python run.py --task object-v0-Classical \
 
 Success videos are written to `logs/videos/object-v0-Classical/<timestamp>/`.
 
-## Further reading
+---
 
-- [docs/ur_grasp_database_workflow.md](../../docs/ur_grasp_database_workflow.md) — full asset pipeline
-- [docs/classical_grasp_sampling.md](../../docs/classical_grasp_sampling.md) — grasp generation and runtime options
-- [command.txt](../../command.txt) — copy-paste command snippets
+## Documentation
+
+| Doc | Description |
+|-----|-------------|
+| [`README.md`](README.md) | This quick start |
+| [`../../grasp_sampler/sampling.md`](../../grasp_sampler/sampling.md) | Grasp generation and runtime options |
+| [`../../grasp_sampler/pose-logistics.md`](../../grasp_sampler/pose-logistics.md) | Coordinate frames and troubleshooting |
+
+Related: [`../../UR_grasp_database/README.md`](../../UR_grasp_database/README.md), [`../../tools/README.md`](../../tools/README.md)

@@ -4,6 +4,8 @@ Isaac Lab environment package for **SQ estimation synthetic data collection**. I
 
 Registered Gym task: **`SQ-v0-Data`**
 
+Related guides: [`datasets/README.md`](../../datasets/README.md), [`tools/README.md`](../../tools/README.md), [`multi-object-collection.md`](multi-object-collection.md), [`../../tools/partial-pc-extraction.md`](../../tools/partial-pc-extraction.md)
+
 ---
 
 ## Package overview
@@ -259,7 +261,7 @@ python run.py --task SQ-v0-Data --num_envs 1 --enable_cameras --headless \
   --max_episodes 1
 ```
 
-See [`docs/multi_object_data_collection.md`](../../docs/multi_object_data_collection.md) for the full workflow, `meta.json` fields, and `tools/visualize_partial_pc.py` usage.
+See [`multi-object-collection.md`](multi-object-collection.md) for the full workflow, `meta.json` fields, and `tools/visualize_partial_pc.py` usage.
 
 ### CLI flags (via `run.py`)
 
@@ -293,7 +295,18 @@ These live outside `supersq_grasp_data/` but consume its output:
 | `tools/inspect_sq_sample.py` | Inspect depth/seg/pcd of one sample |
 | `tools/visualize_partial_pc.py` | Open3D viewer for target or all scene-object partial PCs |
 
-See also: [`docs/multi_object_data_collection.md`](../../docs/multi_object_data_collection.md), [`docs/partial_pc_extraction.md`](../../docs/partial_pc_extraction.md)
+See also: [`multi-object-collection.md`](multi-object-collection.md), [`../../tools/partial-pc-extraction.md`](../../tools/partial-pc-extraction.md)
+
+---
+
+## Documentation
+
+| Doc | Description |
+|-----|-------------|
+| [`README.md`](README.md) | This package reference |
+| [`multi-object-collection.md`](multi-object-collection.md) | Cluttered-scene export workflow |
+
+Related: [`../../datasets/README.md`](../../datasets/README.md), [`../../tools/partial-pc-extraction.md`](../../tools/partial-pc-extraction.md)
 
 ---
 

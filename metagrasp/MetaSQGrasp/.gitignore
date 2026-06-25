@@ -4,7 +4,7 @@ models/dataset_real/*
 data
 env/data
 data_all
-logs*
+# logs: see repo root .gitignore (curated demo whitelist)
 experiments/*
 .algorithms/contact3d/contact3d/nn/vlm_util/dinov2_util/pretrained
 wandb*

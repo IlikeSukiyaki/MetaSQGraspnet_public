@@ -1,0 +1,10 @@
+{
+  "camera_index": 1,
+  "camera_role": "topdown",
+  "id_to_labels": {
+    "0": "BACKGROUND",
+    "1": "UNLABELLED",
+    "2": "011"
+  },
+  "depth_max_m": 2.0
+}
