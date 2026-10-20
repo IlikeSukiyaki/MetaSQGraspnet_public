@@ -12,8 +12,10 @@ All teaser media lives in [`metagrasp/MetaSQGrasp/assets/`](metagrasp/MetaSQGras
 
 **Real-robot demo** — [RGBSQGrasp](https://arxiv.org/abs/2503.02387) bin picking on a UR arm. The left side shows the inferred grasp and the superquadric scene fit; the right side is the robot picking from a single RGB view. This is the real-world experiment from our IROS 2025 Robotic Grasping and Manipulation Competition Workshop paper (Best Workshop Paper).
 
-<p align="center">
-  <img src="metagrasp/MetaSQGrasp/assets/real_robot_demo.gif" alt="RGBSQGrasp real-robot bin picking: grasp and scene fit beside UR pick-and-place" width="720">
+<p align="center" id="real-robot-demo">
+  <a href="#real-robot-demo">
+    <img src="metagrasp/MetaSQGrasp/assets/real_robot_demo.gif" alt="RGBSQGrasp real-robot bin picking: grasp and scene fit beside the UR arm" width="480">
+  </a>
 </p>
 
 Each simulation demo below pairs **Isaac Sim pick-and-lift** (GIF) with **SQ fit and grasp-pose visualization** (PNG) from the same `supersq_grasp-v0` run.
