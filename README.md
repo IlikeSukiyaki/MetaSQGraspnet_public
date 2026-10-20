@@ -8,7 +8,15 @@ The project builds on object assets and grasp-label conventions from [MetaGraspN
 
 ## Teasers
 
-All teaser media lives in [`metagrasp/MetaSQGrasp/assets/`](metagrasp/MetaSQGrasp/assets/). Each grasp demo pairs **Isaac Sim pick-and-lift** (GIF) with **SQ fit and grasp-pose visualization** (PNG) from the same `supersq_grasp-v0` run.
+All teaser media lives in [`metagrasp/MetaSQGrasp/assets/`](metagrasp/MetaSQGrasp/assets/).
+
+**Real-robot demo** — [RGBSQGrasp](https://arxiv.org/abs/2503.02387) bin picking on a UR arm. The left side shows the inferred grasp and the superquadric scene fit; the right side is the robot picking from a single RGB view. This is the real-world experiment from our IROS 2025 Robotic Grasping and Manipulation Competition Workshop paper (Best Workshop Paper).
+
+<p align="center">
+  <img src="metagrasp/MetaSQGrasp/assets/real_robot_demo.gif" alt="RGBSQGrasp real-robot bin picking: grasp and scene fit beside UR pick-and-place" width="720">
+</p>
+
+Each simulation demo below pairs **Isaac Sim pick-and-lift** (GIF) with **SQ fit and grasp-pose visualization** (PNG) from the same `supersq_grasp-v0` run.
 
 | Demo | Task | Object | Simulation (GIF) | SQ fit & grasp poses (PNG) |
 |------|------|--------|------------------|----------------------------|
@@ -206,7 +214,24 @@ pip install -r requirements.txt
 
 ## Citation
 
-If you use MetaGraspNet object assets or labels, please cite:
+If you use this code, please cite our IROS workshop paper:
+
+```bibtex
+@misc{xu2025rgbsqgrasp,
+  title={RGBSQGrasp: Inferring Local Superquadric Primitives from Single RGB Image for Graspability-Aware Bin Picking},
+  author={Yifeng Xu and Fan Zhu and Ye Li and Sebastian Ren and Xiaonan Huang and Yuhao Chen},
+  year={2025},
+  eprint={2503.02387},
+  archivePrefix={arXiv},
+  primaryClass={cs.RO},
+  url={https://arxiv.org/abs/2503.02387},
+  note={Best Workshop Paper, IROS 2025 Robotic Grasping and Manipulation Competition Workshop}
+}
+```
+
+Paper: [https://arxiv.org/abs/2503.02387](https://arxiv.org/abs/2503.02387)
+
+If you use MetaGraspNet object assets or labels, please also cite:
 
 ```bibtex
 @ARTICLE{metagraspnetv2,
