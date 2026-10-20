@@ -20,12 +20,6 @@ All teaser media lives in [`metagrasp/MetaSQGrasp/assets/`](metagrasp/MetaSQGras
 
 Each simulation demo below pairs **Isaac Sim pick-and-lift** (GIF) with **SQ fit and grasp-pose visualization** (PNG) from the same `supersq_grasp-v0` run.
 
-| Demo | Task | Object | Simulation (GIF) | SQ fit & grasp poses (PNG) |
-|------|------|--------|------------------|----------------------------|
-| 1 | `supersq_grasp-v0` | **016** | [`demo_1.gif`](metagrasp/MetaSQGrasp/assets/demo_1.gif) | [`demo_1.png`](metagrasp/MetaSQGrasp/assets/demo_1.png) |
-| 2 | `supersq_grasp-v0` | **010** | [`demo_2.gif`](metagrasp/MetaSQGrasp/assets/demo_2.gif) | [`demo_2.png`](metagrasp/MetaSQGrasp/assets/demo_2.png) |
-| 3 | `supersq_grasp-v0` | **001** | [`demo_3.gif`](metagrasp/MetaSQGrasp/assets/demo_3.gif) | [`demo_3.png`](metagrasp/MetaSQGrasp/assets/demo_3.png) |
-
 **Demo 1** — `supersq_grasp-v0`, object **016**
 
 | Isaac Sim execution | SQ estimation & grasp poses |
